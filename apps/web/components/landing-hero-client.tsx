@@ -255,10 +255,10 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
           <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-[hsl(var(--card))] px-3 py-1 text-sm font-medium text-muted-foreground shadow-sm">
             <Sparkles size={15} className="text-primary" /> Link management for Myanmar builders
           </div>
-          <h1 className="mx-auto max-w-4xl text-5xl font-bold tracking-normal text-foreground md:text-6xl">
+          <h1 className="mx-auto text-3xl font-bold tracking-normal text-foreground md:text-5xl md:whitespace-nowrap">
             Transform your long links into powerful Phyat URLs
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted-foreground">
+          <p className="mx-auto mt-5 text-lg text-muted-foreground">
             Shorten, customize, protect, and track links with a clean dashboard and developer-ready API.
           </p>
 

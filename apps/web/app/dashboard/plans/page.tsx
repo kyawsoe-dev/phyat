@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { requireUser } from '@/lib/auth';
 import { CreditCard, Check } from 'lucide-react';
 import Link from 'next/link';
@@ -25,6 +26,10 @@ const plans = [
     features: ['PH_API_KEY access', 'External shorten API', 'Unlimited links', 'Team-ready limits'],
   },
 ];
+
+export const metadata: Metadata = {
+  title: "Plans",
+};
 
 export default async function PlansPage() {
   await requireUser();

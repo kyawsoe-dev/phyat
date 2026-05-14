@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import {
   BarChart3,
   Check,
@@ -68,6 +69,11 @@ const plans = [
     features: ['PH_API_KEY access', 'External shorten API', 'Unlimited links', 'Team-ready limits'],
   },
 ];
+
+export const metadata: Metadata = {
+  title: 'URL Shortener for Myanmar Builders',
+  description: 'Shorten, customize, protect, and track links with a clean dashboard and developer-ready API.',
+};
 
 export default async function HomePage() {
   const user = await getCurrentUser();

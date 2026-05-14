@@ -24,14 +24,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
   if (!data) {
     return {
-      title: 'Link not found - Phyat',
+      title: 'Link not found',
       description: 'This Phyat link does not exist.',
     };
   }
 
   if (data.isExpired || data.status === 'DISABLED') {
     return {
-      title: 'Link expired - Phyat',
+      title: 'Link expired',
       description: 'This Phyat link has expired or is disabled.',
     };
   }

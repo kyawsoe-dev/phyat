@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { requireUser, authHeaders } from '@/lib/auth';
 import { apiBaseUrl } from '@/lib/utils';
 import { User, Bell, Shield, KeyRound } from 'lucide-react';
@@ -24,6 +25,10 @@ async function getApiKeys() {
     return [];
   }
 }
+
+export const metadata: Metadata = {
+  title: "Settings",
+};
 
 export default async function SettingsPage() {
   const user = await requireUser();

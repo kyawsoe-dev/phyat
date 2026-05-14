@@ -1,41 +1,21 @@
+'use client';
+
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useFormState } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { apiBaseUrl } from "@/lib/utils";
-import { setToken } from "@/lib/auth";
 import { Logo } from "@/components/logo";
-
-async function signIn(formData: FormData) {
-  "use server";
-
-  const response = await fetch(`${apiBaseUrl}/auth/login`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      email: formData.get("email"),
-      password: formData.get("password"),
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ message: "Unable to sign in." }));
-    throw new Error(error.message ?? "Unable to sign in.");
-  }
-
-  const session = (await response.json()) as { accessToken: string };
-  setToken(session.accessToken);
-  redirect("/dashboard");
-}
+import { AlertCircle } from "lucide-react";
+import { signIn } from "./actions";
 
 export default function SignInPage() {
+  const [state, formAction] = useFormState(signIn, undefined);
+
   return (
     <main className="flex min-h-screen items-center justify-center px-6">
       <form
-        action={signIn}
+        action={formAction}
         className="w-full max-w-sm rounded-md border border-border bg-white p-6 shadow-sm"
       >
         <div className="mb-6 flex flex-col items-center gap-1">
@@ -44,10 +24,18 @@ export default function SignInPage() {
             Fast URL shortening for smart links.
           </p>
         </div>
+
+        {state?.error && (
+          <div className="mb-4 flex items-center gap-2 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-400">
+            <AlertCircle size={16} className="shrink-0" />
+            {state.error}
+          </div>
+        )}
+
         <div className="space-y-4">
           <div className="space-y-1">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              Email <span className="text-red-500">*</span>
             </label>
             <Input
               id="email"
@@ -59,7 +47,7 @@ export default function SignInPage() {
           </div>
           <div className="space-y-1">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              Password <span className="text-red-500">*</span>
             </label>
             <PasswordInput
               id="password"

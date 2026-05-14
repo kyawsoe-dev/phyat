@@ -9,7 +9,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Phyat",
+  title: {
+    default: "Phyat",
+    template: "%s — Phyat",
+  },
   description: "Fast URL shortening for smart links.",
   icons: {
     icon: "/favicon.png",

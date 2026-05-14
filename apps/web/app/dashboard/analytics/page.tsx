@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { requireUser, authHeaders } from '@/lib/auth';
 import { apiBaseUrl } from '@/lib/utils';
 import { BarChart3, MousePointerClick, Globe2 } from 'lucide-react';
@@ -26,6 +27,10 @@ async function getLinks(): Promise<LinkRow[]> {
     return [];
   }
 }
+
+export const metadata: Metadata = {
+  title: "Analytics",
+};
 
 export default async function AnalyticsPage() {
   await requireUser();

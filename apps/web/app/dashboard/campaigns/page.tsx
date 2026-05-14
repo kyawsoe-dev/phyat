@@ -1,6 +1,11 @@
+import type { Metadata } from 'next';
 import { requireUser } from '@/lib/auth';
 import { Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+export const metadata: Metadata = {
+  title: "Campaigns",
+};
 
 export default async function CampaignsPage() {
   await requireUser();

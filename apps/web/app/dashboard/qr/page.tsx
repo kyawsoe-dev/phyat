@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { requireUser, authHeaders } from '@/lib/auth';
 import { apiBaseUrl } from '@/lib/utils';
 import { QrCode } from 'lucide-react';
@@ -24,6 +25,10 @@ async function getLinksWithQR(): Promise<LinkWithQR[]> {
     return [];
   }
 }
+
+export const metadata: Metadata = {
+  title: "QR Codes",
+};
 
 export default async function QRPage() {
   await requireUser();
