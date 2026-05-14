@@ -1,0 +1,72 @@
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { apiBaseUrl } from './utils';
+
+const cookieName = 'phyat_token';
+
+export type User = {
+  id: string;
+  email: string;
+  name?: string | null;
+  tier: { code: 'FREE' | 'PRO' | 'DEVELOPER'; name: string; maxLinks: number | null };
+};
+
+export function getToken() {
+  return cookies().get(cookieName)?.value;
+}
+
+export async function getCurrentUser(): Promise<User | null> {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const response = await fetch(`${apiBaseUrl}/auth/me`, {
+      headers: { authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+export function setToken(token: string) {
+  cookies().set(cookieName, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  });
+}
+
+export function clearToken() {
+  cookies().delete(cookieName);
+}
+
+export async function requireUser() {
+  const token = getToken();
+  if (!token) redirect('/sign-in');
+
+  const response = await fetch(`${apiBaseUrl}/auth/me`, {
+    headers: { authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    clearToken();
+    redirect('/sign-in');
+  }
+
+  return response.json() as Promise<{
+    id: string;
+    email: string;
+    name?: string | null;
+    tier: { code: 'FREE' | 'PRO' | 'DEVELOPER'; name: string; maxLinks: number | null };
+  }>;
+}
+
+export function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { authorization: `Bearer ${token}` } : {};
+}

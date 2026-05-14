@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LinkStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum TierCode {
+  FREE
+  PRO
+  DEVELOPER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String   @map("password_hash")
+  tierId       String   @map("tier_id")
+  tier         Tier     @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  links        Link[]
+  apiKeys      ApiKey[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Tier {
+  id          String   @id @default(cuid())
+  code        TierCode @unique
+  name        String
+  maxLinks    Int?     @map("max_links")
+  users       User[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("tiers")
+}
+
+model Link {
+  id           String      @id @default(cuid())
+  userId       String      @map("user_id")
+  slug         String      @unique
+  destination  String
+  title        String?
+  passwordHash String?     @map("password_hash")
+  expiresAt    DateTime?   @map("expires_at")
+  status       LinkStatus  @default(ACTIVE)
+  qrCodeDataUrl String?    @map("qr_code_data_url")
+  clickCount   Int         @default(0) @map("click_count")
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics    Analytics[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("links")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  prefix      String
+  keyHash     String    @unique @map("key_hash")
+  lastFour    String    @map("last_four")
+  lastUsedAt  DateTime? @map("last_used_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("api_keys")
+}
+
+model Analytics {
+  id        String   @id @default(cuid())
+  linkId    String   @map("link_id")
+  link      Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  userAgent String?  @map("user_agent")
+  referrer  String?
+  ip        String?
+  country   String?
+  region    String?
+  city      String?
+  clickedAt DateTime @default(now()) @map("clicked_at")
+
+  @@index([linkId, clickedAt])
+  @@index([clickedAt])
+  @@map("analytics")
+}
