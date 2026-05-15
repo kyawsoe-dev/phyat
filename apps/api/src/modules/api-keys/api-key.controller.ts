@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
@@ -31,5 +31,11 @@ export class ApiKeyController {
   @ApiResponse({ status: 201, description: 'API key created successfully' })
   create(@CurrentUser() user: AuthenticatedUser, @Body() body: CreateApiKeyDto) {
     return this.apiKeys.create(user.id, body.name);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Revoke an API key' })
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.apiKeys.revoke(id, user.id);
   }
 }

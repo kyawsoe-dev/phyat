@@ -62,6 +62,7 @@ export async function requireUser() {
     id: string;
     email: string;
     name?: string | null;
+    createdAt: string;
     tier: { code: 'FREE' | 'PRO' | 'DEVELOPER'; name: string; maxLinks: number | null };
   }>;
 }

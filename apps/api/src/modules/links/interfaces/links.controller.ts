@@ -25,6 +25,24 @@ export class LinksController {
     return this.links.create(user.id, input);
   }
 
+  @UseGuards(JwtAuthGuard, TierLimitGuard)
+  @Post('links/bulk')
+  @ApiOperation({ summary: 'Bulk create short links' })
+  @ApiResponse({ status: 201, description: 'Links created successfully' })
+  async createBulk(@CurrentUser() user: AuthenticatedUser, @Body() inputs: CreateLinkDto[]) {
+    const results = [];
+    const errors: { index: number; error: string }[] = [];
+    for (let i = 0; i < inputs.length; i++) {
+      try {
+        const link = await this.links.create(user.id, inputs[i]);
+        results.push(link);
+      } catch (e) {
+        errors.push({ index: i, error: (e as Error).message });
+      }
+    }
+    return { data: results, errors };
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('links')
   @ApiOperation({ summary: 'List user links with pagination' })

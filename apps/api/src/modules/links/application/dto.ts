@@ -21,6 +21,18 @@ export class CreateLinkDto {
   @IsString()
   @Length(6, 128)
   password?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  generateQR?: boolean;
+
+  @IsOptional()
+  @IsString()
+  campaignId?: string;
+
+  @IsOptional()
+  @IsString()
+  domainId?: string;
 }
 
 export class VerifyPasswordDto {

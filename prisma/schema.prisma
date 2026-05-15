@@ -26,6 +26,8 @@ model User {
   tierId       String   @map("tier_id")
   tier         Tier     @relation(fields: [tierId], references: [id], onDelete: Restrict)
   links        Link[]
+  campaigns    Campaign[]
+  domains      Domain[]
   apiKeys      ApiKey[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -56,6 +58,10 @@ model Link {
   status       LinkStatus  @default(ACTIVE)
   qrCodeDataUrl String?    @map("qr_code_data_url")
   clickCount   Int         @default(0) @map("click_count")
+  campaignId   String?     @map("campaign_id")
+  campaign     Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  domainId     String?     @map("domain_id")
+  domain       Domain?     @relation(fields: [domainId], references: [id], onDelete: SetNull)
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   analytics    Analytics[]
   createdAt    DateTime    @default(now()) @map("created_at")
@@ -63,7 +69,44 @@ model Link {
 
   @@index([userId, createdAt])
   @@index([expiresAt])
+  @@index([campaignId])
+  @@index([domainId])
   @@map("links")
+}
+
+model Domain {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  domain            String   @unique
+  verified          Boolean  @default(false)
+  verificationToken String   @map("verification_token")
+  sslEnabled        Boolean  @default(false) @map("ssl_enabled")
+  isDefault         Boolean  @default(false) @map("is_default")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links             Link[]
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("domains")
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  name        String
+  description String?
+  clickGoal   Int?      @map("click_goal")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links       Link[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@map("campaigns")
 }
 
 model ApiKey {

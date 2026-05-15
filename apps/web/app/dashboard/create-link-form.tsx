@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+type Campaign = { id: string; name: string };
+type Domain = { id: string; domain: string; verified: boolean };
+
 export function CreateLinkForm({
   createLink,
 }: {
@@ -20,6 +23,21 @@ export function CreateLinkForm({
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      fetch("/api/campaigns")
+        .then((r) => r.ok && r.json())
+        .then((data) => setCampaigns(data ?? []))
+        .catch(() => {});
+      fetch("/api/domains")
+        .then((r) => r.ok && r.json())
+        .then((data) => setDomains(data?.filter((d: Domain) => d.verified) ?? []))
+        .catch(() => {});
+    }
+  }, [open]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -82,6 +100,40 @@ export function CreateLinkForm({
             </div>
 
             <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="campaignId">
+                Campaign
+              </label>
+              <select
+                id="campaignId"
+                name="campaignId"
+                className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">No campaign</option>
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {domains.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="domainId">
+                  Domain
+                </label>
+                <select
+                  id="domainId"
+                  name="domainId"
+                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                >
+                  <option value="">Default domain</option>
+                  {domains.map((d) => (
+                    <option key={d.id} value={d.id}>{d.domain}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="expiresAt">
                 Expiration
               </label>
@@ -100,6 +152,16 @@ export function CreateLinkForm({
                 minLength={6}
               />
             </div>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="generateQR"
+                defaultChecked
+                className="rounded border-border"
+              />
+              Generate QR code
+            </label>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 

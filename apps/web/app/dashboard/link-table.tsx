@@ -2,16 +2,11 @@
 
 import { useState } from "react";
 import {
-  CalendarDays,
   Copy,
   Edit,
-  Lock,
   Power,
   Trash2,
   BarChart3,
-  Globe2,
-  Monitor,
-  Smartphone,
   Check,
   Download,
   Search,
@@ -29,6 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading";
 import { CreateLinkForm } from "./create-link-form";
+import { BulkUploadDialog } from "@/components/bulk-upload-dialog";
+import { AnalyticsCharts } from "@/components/analytics-charts";
 
 export type LinkRow = {
   id: string;
@@ -41,12 +38,17 @@ export type LinkRow = {
   clickCount: number;
   qrCodeDataUrl?: string | null;
   createdAt: string;
+  domainId?: string | null;
+  domain?: { domain: string } | null;
 };
 
 type LinkStats = {
   totalClicks: number;
   byCountry: Array<{ country: string; _count: { country: number } }>;
   byDevice: { mobile: number; desktop: number };
+  byReferrer: Array<{ referrer: string | null; _count: { referrer: number } }>;
+  overTime: Array<{ date: string; clicks: number }>;
+  byCity: Array<{ city: string; country: string | null; _count: { city: number } }>;
 };
 
 export function LinkTable({
@@ -56,6 +58,7 @@ export function LinkTable({
   deleteAction,
   editAction,
   createAction,
+  bulkCreateAction,
   nextCursor,
 }: {
   links: LinkRow[];
@@ -64,6 +67,7 @@ export function LinkTable({
   deleteAction?: (formData: FormData) => void | Promise<void>;
   editAction?: (formData: FormData) => void | Promise<void>;
   createAction?: (formData: FormData) => Promise<void>;
+  bulkCreateAction?: (formData: FormData) => Promise<void>;
   nextCursor?: string | null;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -82,15 +86,29 @@ export function LinkTable({
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "DISABLED">("ALL");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
-  const filtered = search
-    ? links.filter(
-        (l) =>
-          l.slug.toLowerCase().includes(search.toLowerCase()) ||
-          l.destination.toLowerCase().includes(search.toLowerCase()) ||
-          (l.title ?? "").toLowerCase().includes(search.toLowerCase()),
+  const filtered = links.filter((l) => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (
+        !l.slug.toLowerCase().includes(q) &&
+        !l.destination.toLowerCase().includes(q) &&
+        !(l.title ?? "").toLowerCase().includes(q)
       )
-    : links;
+        return false;
+    }
+    if (statusFilter !== "ALL" && l.status !== statusFilter) return false;
+    if (startDate && new Date(l.createdAt) < new Date(startDate)) return false;
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      if (new Date(l.createdAt) > end) return false;
+    }
+    return true;
+  });
 
   function toggleExpand(linkId: string) {
     if (expandedId === linkId) {
@@ -118,8 +136,9 @@ export function LinkTable({
     }
   }
 
-  function copyUrl(slug: string) {
-    const url = `${appUrl}/${slug}`;
+  function copyUrl(slug: string, domain?: { domain: string } | null) {
+    const base = domain ? `https://${domain.domain}` : appUrl;
+    const url = `${base}/${slug}`;
     navigator.clipboard.writeText(url).catch(() => {});
     setCopiedId(slug);
     setTimeout(() => setCopiedId(null), 2000);
@@ -146,6 +165,11 @@ export function LinkTable({
     setEditingLink(null);
   }
 
+  function linkUrl(slug: string, domain?: { domain: string } | null): string {
+    const base = domain ? `https://${domain.domain}` : appUrl;
+    return `${base}/${slug}`;
+  }
+
   function formatCount(n: number): string {
     if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
     if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -162,22 +186,51 @@ export function LinkTable({
             Create, manage, and track your shortened URLs
           </p>
         </div>
-        {createAction && <CreateLinkForm createLink={createAction} />}
+        <div className="flex items-center gap-2">
+          {bulkCreateAction && <BulkUploadDialog onCreate={bulkCreateAction} />}
+          {createAction && <CreateLinkForm createLink={createAction} />}
+        </div>
       </div>
 
       <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
-        {/* Search */}
+        {/* Search & Filters */}
         <div className="border-b border-border px-4 py-4">
-          <div className="relative max-w-md">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-            />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-[200px] flex-1">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <input
+                className="h-10 w-full rounded-lg border border-border bg-background pl-10 pr-4 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="Search by slug, URL or title..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <select
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "DISABLED")}
+            >
+              <option value="ALL">All Status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="DISABLED">Disabled</option>
+            </select>
             <input
-              className="h-10 w-full rounded-lg border border-border bg-background pl-10 pr-4 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-              placeholder="Search by slug, URL or title..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              type="date"
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              placeholder="Start date"
+            />
+            <span className="text-xs text-muted-foreground">to</span>
+            <input
+              type="date"
+              className="h-10 rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              placeholder="End date"
             />
           </div>
         </div>
@@ -188,11 +241,11 @@ export function LinkTable({
               <Search size={20} className="text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">
-              {search ? "No links match your search" : "No links yet"}
+              {search || statusFilter !== "ALL" || startDate || endDate ? "No links match your filters" : "No links yet"}
             </p>
             <p className="text-sm text-muted-foreground">
-              {search
-                ? "Try a different search term."
+              {search || statusFilter !== "ALL" || startDate || endDate
+                ? "Try adjusting your search or filter criteria."
                 : "Create your first shortened URL to get started."}
             </p>
           </div>
@@ -249,12 +302,12 @@ export function LinkTable({
                           />
                           {/* Short URL */}
                           <a
-                            href={`${appUrl}/${link.slug}`}
+                            href={linkUrl(link.slug, (link as any).domain)}
                             target="_blank"
                             rel="noreferrer"
                             className="truncate text-sm font-semibold text-primary hover:underline"
                           >
-                            {appUrl}/{link.slug}
+                            {linkUrl(link.slug, (link as any).domain)}
                           </a>
                           <ExternalLink
                             size={12}
@@ -302,7 +355,7 @@ export function LinkTable({
                         <button
                           type="button"
                           title="Copy short URL"
-                          onClick={() => copyUrl(link.slug)}
+                          onClick={() => copyUrl(link.slug, (link as any).domain)}
                           className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                           {copiedId === link.slug ? (
@@ -354,7 +407,7 @@ export function LinkTable({
                           </button>
                         </form>
 
-                        {deleteAction && (
+                        {/* {deleteAction && (
                           <button
                             type="button"
                             title="Delete"
@@ -363,7 +416,7 @@ export function LinkTable({
                           >
                             <Trash2 size={15} />
                           </button>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </div>
@@ -371,162 +424,15 @@ export function LinkTable({
                   {/* Expanded Analytics */}
                   {isExpanded && (
                     <div className="border-t border-border bg-muted/10 px-5 py-5">
-                      {/* Mobile Status Row */}
-                      <div className="mb-4 flex items-center gap-3 md:hidden">
-                        <span
-                          className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                            isActive
-                              ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {isActive ? "Active" : "Disabled"}
-                        </span>
-                        <span className="text-sm tabular-nums">
-                          <strong>{formatCount(link.clickCount)}</strong>{" "}
-                          <span className="text-muted-foreground">clicks</span>
-                        </span>
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {/* Details */}
-                        <div className="rounded-lg border border-border bg-background p-4">
-                          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Details
-                          </h4>
-                          <div className="space-y-2 text-sm">
-                            <p>
-                              <span className="text-muted-foreground">
-                                Destination:
-                              </span>{" "}
-                              <span className="block break-all text-foreground/80">
-                                {link.destination}
-                              </span>
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">
-                                Title:
-                              </span>{" "}
-                              <span className="text-foreground/80">
-                                {link.title || "-"}
-                              </span>
-                            </p>
-                            <p>
-                              <span className="text-muted-foreground">
-                                Created:
-                              </span>{" "}
-                              <span className="text-foreground/80">
-                                {new Date(link.createdAt).toLocaleDateString()}
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Security */}
-                        <div className="rounded-lg border border-border bg-background p-4">
-                          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Security
-                          </h4>
-                          <div className="space-y-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              <Lock size={14} className="text-muted-foreground" />
-                              <span>
-                                {link.passwordHash
-                                  ? "Password protected"
-                                  : "No password"}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <CalendarDays
-                                size={14}
-                                className="text-muted-foreground"
-                              />
-                              <span>
-                                {link.expiresAt
-                                  ? `Expires ${new Date(
-                                      link.expiresAt,
-                                    ).toLocaleDateString()}`
-                                  : "No expiration"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Analytics */}
-                        <div className="rounded-lg border border-border bg-background p-4">
-                          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            Analytics
-                          </h4>
-                          {statsLoading === link.id ? (
-                            <LoadingSpinner className="py-4" />
-                          ) : stats ? (
-                            <div className="space-y-3">
-                              <p className="text-2xl font-bold">
-                                {formatCount(stats.totalClicks)}
-                              </p>
-                              {stats.byDevice && (
-                                <div className="flex items-center gap-4 text-xs">
-                                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                                    <Monitor size={13} />
-                                    {stats.byDevice.desktop}
-                                  </span>
-                                  <span className="flex items-center gap-1.5 text-muted-foreground">
-                                    <Smartphone size={13} />
-                                    {stats.byDevice.mobile}
-                                  </span>
-                                </div>
-                              )}
-                              {stats.byCountry && stats.byCountry.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {stats.byCountry.slice(0, 3).map((c) => (
-                                    <span
-                                      key={c.country}
-                                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs"
-                                    >
-                                      <Globe2 size={10} />
-                                      {c.country} {c._count.country}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">
-                              No clicks yet
-                            </p>
-                          )}
-                        </div>
-
-                        {/* QR Code */}
-                        <div className="rounded-lg border border-border bg-background p-4">
-                          <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            QR Code
-                          </h4>
-                          {link.qrCodeDataUrl ? (
-                            <div className="flex flex-col items-center gap-3">
-                              {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img
-                                src={link.qrCodeDataUrl}
-                                alt="QR"
-                                className="h-24 w-24 rounded-md border border-border"
-                              />
-                              <a
-                                href={link.qrCodeDataUrl}
-                                download={`${link.slug}-qr.png`}
-                              >
-                                <Button variant="ghost" size="sm">
-                                  <Download size={13} />
-                                  Download
-                                </Button>
-                              </a>
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">
-                              Not generated
-                            </p>
-                          )}
-                        </div>
-                      </div>
+                      {statsLoading === link.id ? (
+                        <LoadingSpinner className="py-12" />
+                      ) : !stats ? (
+                        <p className="text-sm text-muted-foreground text-center py-8">
+                          No clicks yet
+                        </p>
+                      ) : (
+                        <AnalyticsCharts stats={stats} />
+                      )}
                     </div>
                   )}
                 </div>
@@ -551,7 +457,7 @@ export function LinkTable({
           <DialogContent>
             <DialogHeader>
               <DialogTitle>
-                Edit link — {appUrl}/{editingLink.slug}
+                Edit link — {linkUrl(editingLink.slug, (editingLink as any).domain)}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleEditSubmit} className="space-y-4">
@@ -653,7 +559,7 @@ export function LinkTable({
             <p className="text-sm text-muted-foreground">
               This will permanently delete{" "}
               <strong>
-                {appUrl}/{showDeleteConfirm.slug}
+                {linkUrl(showDeleteConfirm.slug, (showDeleteConfirm as any).domain)}
               </strong>
               . This action cannot be undone.
             </p>

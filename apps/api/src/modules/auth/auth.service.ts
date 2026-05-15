@@ -1,9 +1,9 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TierCode } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../common/prisma.service';
-import { LoginDto, RegisterDto } from './dto';
+import { ChangePasswordDto, LoginDto, RegisterDto, UpdateProfileDto } from './dto';
 
 @Injectable()
 export class AuthService {
@@ -55,12 +55,38 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.name,
+      createdAt: user.createdAt,
       tier: {
         code: user.tier.code,
         name: user.tier.name,
         maxLinks: user.tier.maxLinks,
       },
     };
+  }
+
+  async updateProfile(userId: string, input: UpdateProfileDto) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: { name: input.name },
+      select: { id: true, email: true, name: true, createdAt: true },
+    });
+  }
+
+  async changePassword(userId: string, input: ChangePasswordDto) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    if (!(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
+      throw new UnauthorizedException('Current password is incorrect.');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: await bcrypt.hash(input.newPassword, 12) },
+    });
+
+    return { success: true };
   }
 
   private async session(user: { id: string; email: string; name: string | null; tier: { code: TierCode; name: string; maxLinks: number | null } }) {

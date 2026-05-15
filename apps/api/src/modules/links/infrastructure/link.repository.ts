@@ -32,6 +32,8 @@ export class LinkRepository {
         clickCount: true,
         qrCodeDataUrl: true,
         createdAt: true,
+        domainId: true,
+        domain: { select: { domain: true } },
       },
     });
   }

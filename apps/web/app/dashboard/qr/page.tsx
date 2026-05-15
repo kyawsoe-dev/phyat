@@ -1,14 +1,19 @@
 import type { Metadata } from 'next';
+import { revalidatePath } from 'next/cache';
 import { requireUser, authHeaders } from '@/lib/auth';
 import { apiBaseUrl } from '@/lib/utils';
-import { QrCode } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { QRCardClient } from './qr-card-client';
+import { QRContent } from './qr-content';
 
 type LinkWithQR = {
+  id: string;
   slug: string;
   title: string | null;
   destination: string;
+  status: 'ACTIVE' | 'DISABLED';
+  clickCount: number;
+  createdAt: string;
+  expiresAt: string | null;
+  passwordHash: string | null;
   qrCodeDataUrl: string | null;
 };
 
@@ -26,8 +31,76 @@ async function getLinksWithQR(): Promise<LinkWithQR[]> {
   }
 }
 
+async function createQR(formData: FormData) {
+  'use server';
+
+  const payload = {
+    destination: formData.get('destination'),
+    title: formData.get('title') || undefined,
+    customAlias: formData.get('customAlias') || undefined,
+    expiresAt: formData.get('expiresAt') || undefined,
+    password: formData.get('password') || undefined,
+    generateQR: formData.get('generateQR') !== 'off',
+  };
+
+  const response = await fetch(`${apiBaseUrl}/links`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Unable to create QR code.');
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/qr');
+}
+
+async function updateQR(formData: FormData) {
+  'use server';
+
+  const response = await fetch(`${apiBaseUrl}/links/${formData.get('id')}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'content-type': 'application/json' },
+    body: JSON.stringify({
+      active: formData.get('active') === 'true',
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Unable to update QR code.');
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/qr');
+}
+
+async function bulkCreateQR(formData: FormData) {
+  'use server';
+
+  const raw = formData.get('entries');
+  if (!raw || typeof raw !== 'string') return;
+
+  const entries = raw.split('\n').filter(Boolean).map((line) => {
+    const [destination, title, customAlias] = line.split(',').map((s) => s.trim());
+    return { destination, title: title || undefined, customAlias: customAlias || undefined, generateQR: true };
+  });
+
+  const response = await fetch(`${apiBaseUrl}/links/bulk`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'content-type': 'application/json' },
+    body: JSON.stringify(entries),
+  });
+
+  if (!response.ok) throw new Error('Unable to bulk create.');
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/qr');
+}
+
 export const metadata: Metadata = {
-  title: "QR Codes",
+  title: 'QR Codes',
 };
 
 export default async function QRPage() {
@@ -35,22 +108,13 @@ export default async function QRPage() {
   const links = await getLinksWithQR();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
-  if (links.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-4 py-20 text-center">
-        <QrCode size={64} className="text-muted-foreground" />
-        <h2 className="text-xl font-semibold">No QR codes yet</h2>
-        <p className="text-muted-foreground">QR codes are generated automatically when you create a short link.</p>
-        <Button asChild><a href="/dashboard">Create a link</a></Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {links.map((link) => (
-        <QRCardClient key={link.slug} link={link} appUrl={appUrl} />
-      ))}
-    </div>
+    <QRContent
+      links={links}
+      appUrl={appUrl}
+      createAction={createQR}
+      updateAction={updateQR}
+      bulkCreateAction={bulkCreateQR}
+    />
   );
 }

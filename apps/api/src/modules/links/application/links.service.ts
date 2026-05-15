@@ -7,6 +7,7 @@ import { CreateLinkDto, UpdateLinkDto } from './dto';
 import { SlugService } from './slug.service';
 import { LinkRepository } from '../infrastructure/link.repository';
 import { CacheService } from '../infrastructure/cache.service';
+import { DomainRepository } from '../../domains/infrastructure/domain.repository';
 import { normalizeSlug } from '../domain/link-policy';
 
 export type PaginatedLinks = {
@@ -21,6 +22,8 @@ export type PaginatedLinks = {
     clickCount: number;
     qrCodeDataUrl: string | null;
     createdAt: Date;
+    domainId: string | null;
+    domain?: { domain: string } | null;
   }>;
   nextCursor: string | null;
 };
@@ -29,6 +32,7 @@ export type PaginatedLinks = {
 export class LinksService {
   constructor(
     private readonly links: LinkRepository,
+    private readonly domains: DomainRepository,
     private readonly slugService: SlugService,
     private readonly config: ConfigService,
     private readonly cache: CacheService,
@@ -42,9 +46,20 @@ export class LinksService {
       throw new ConflictException('That back-half is already taken.');
     }
 
-    const shortUrl = `${this.config.get<string>('PUBLIC_SHORT_URL') ?? 'http://localhost:3000'}/${slug}`;
+    let domainName = this.config.get<string>('PUBLIC_SHORT_URL') ?? 'http://localhost:3000';
+    let domainConnect = undefined;
+
+    if (input.domainId) {
+      const domain = await this.domains.findById(input.domainId, userId);
+      if (domain && domain.verified) {
+        domainName = `https://${domain.domain}`;
+        domainConnect = { connect: { id: input.domainId } };
+      }
+    }
+
+    const shortUrl = `${domainName}/${slug}`;
     const passwordHash = input.password ? await bcrypt.hash(input.password, 12) : undefined;
-    const qrCodeDataUrl = await QRCode.toDataURL(shortUrl, { margin: 1, width: 512 });
+    const qrCodeDataUrl = input.generateQR !== false ? await QRCode.toDataURL(shortUrl, { margin: 1, width: 512 }) : undefined;
 
     const link = await this.links.create({
       slug,
@@ -54,6 +69,8 @@ export class LinksService {
       expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
       passwordHash,
       qrCodeDataUrl,
+      ...(input.campaignId ? { campaign: { connect: { id: input.campaignId } } } : {}),
+      ...(domainConnect ? { domain: domainConnect } : {}),
     });
 
     this.cache.set(slug, {

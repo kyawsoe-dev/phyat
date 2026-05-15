@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { requireUser, authHeaders } from '@/lib/auth';
 import { apiBaseUrl } from '@/lib/utils';
-import { User, Bell, Shield, KeyRound } from 'lucide-react';
-import { DeveloperApiPanel } from '../developer-api-panel';
+import { SettingsClient } from './settings-client';
 
 async function getApiKeys() {
   try {
@@ -26,56 +25,53 @@ async function getApiKeys() {
   }
 }
 
+async function getStats() {
+  try {
+    const [linksRes, campaignsRes, domainsRes] = await Promise.all([
+      fetch(`${apiBaseUrl}/links`, { headers: authHeaders(), cache: 'no-store' }),
+      fetch(`${apiBaseUrl}/campaigns`, { headers: authHeaders(), cache: 'no-store' }),
+      fetch(`${apiBaseUrl}/domains`, { headers: authHeaders(), cache: 'no-store' }),
+    ]);
+
+    const linksData = linksRes.ok ? await linksRes.json() : { data: [] };
+    const campaigns = campaignsRes.ok ? await campaignsRes.json() : [];
+    const domains = domainsRes.ok ? await domainsRes.json() : [];
+
+    const links = linksData.data ?? [];
+    return {
+      linkCount: links.length,
+      qrCount: links.filter((l: any) => l.qrCodeDataUrl).length,
+      campaignCount: campaigns.length,
+      domainCount: domains.length,
+    };
+  } catch {
+    return { linkCount: 0, qrCount: 0, campaignCount: 0, domainCount: 0 };
+  }
+}
+
 export const metadata: Metadata = {
-  title: "Settings",
+  title: 'Settings',
 };
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const apiKeys = await getApiKeys();
+  const [apiKeys, stats] = await Promise.all([getApiKeys(), getStats()]);
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-md border border-border bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <User size={20} className="text-primary" />
-          <h2 className="text-lg font-semibold">Profile</h2>
-        </div>
-        <div className="mt-4 space-y-3 text-sm">
-          <div>
-            <span className="text-muted-foreground">Email</span>
-            <p className="font-medium">{user.email}</p>
-          </div>
-          {user.name && (
-            <div>
-              <span className="text-muted-foreground">Name</span>
-              <p className="font-medium">{user.name}</p>
-            </div>
-          )}
-          <div>
-            <span className="text-muted-foreground">Plan</span>
-            <p className="font-medium">{user.tier.name}</p>
-          </div>
-        </div>
-      </section>
-
-      <DeveloperApiPanel apiKeys={apiKeys} />
-
-      <section className="rounded-md border border-border bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Bell size={20} className="text-primary" />
-          <h2 className="text-lg font-semibold">Notifications</h2>
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">Notification preferences coming soon.</p>
-      </section>
-
-      <section className="rounded-md border border-border bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Shield size={20} className="text-primary" />
-          <h2 className="text-lg font-semibold">Security</h2>
-        </div>
-        <p className="mt-2 text-sm text-muted-foreground">Password and session management coming soon.</p>
-      </section>
-    </div>
+    <SettingsClient
+      user={{
+        id: user.id,
+        email: user.email,
+        name: user.name ?? null,
+        createdAt: user.createdAt,
+        tier: {
+          code: user.tier.code,
+          name: user.tier.name,
+          maxLinks: user.tier.maxLinks,
+        },
+      }}
+      stats={stats}
+      initialApiKeys={apiKeys}
+    />
   );
 }

@@ -29,6 +29,13 @@ export class ApiKeyService {
     return { ...key, secret };
   }
 
+  async revoke(id: string, userId: string) {
+    return this.prisma.apiKey.updateMany({
+      where: { id, userId },
+      data: { revokedAt: new Date() },
+    });
+  }
+
   list(userId: string) {
     return this.prisma.apiKey.findMany({
       where: { userId, revokedAt: null },

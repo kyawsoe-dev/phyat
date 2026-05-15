@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { apiBaseUrl } from '@/lib/utils';
 import { PasswordForm } from './password-form';
 
@@ -76,7 +77,19 @@ export default async function GatewayPage({ params }: { params: { slug: string }
     return <PasswordForm slug={metadata.slug} />;
   }
 
-  redirect(metadata.destination);
+  const headersList = headers();
+  const response = await fetch(`${apiBaseUrl}/r/${metadata.slug}`, {
+    headers: {
+      'user-agent': headersList.get('user-agent') || '',
+      referer: headersList.get('referer') || '',
+      'x-forwarded-for': headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || '',
+    },
+    redirect: 'manual',
+    cache: 'no-store',
+  });
+
+  const location = response.headers.get('location');
+  redirect(location || metadata.destination);
 }
 
 function StatusPage({ title, message }: { title: string; message: string }) {

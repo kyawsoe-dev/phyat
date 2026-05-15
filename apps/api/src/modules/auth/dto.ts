@@ -22,3 +22,20 @@ export class LoginDto {
   @Length(1, 128)
   password!: string;
 }
+
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  name?: string;
+}
+
+export class ChangePasswordDto {
+  @IsString()
+  @Length(1, 128)
+  currentPassword!: string;
+
+  @IsString()
+  @Length(8, 128)
+  newPassword!: string;
+}

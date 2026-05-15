@@ -4,6 +4,7 @@ import { ApiKeyModule } from '../api-keys/api-key.module';
 import { AnalyticsService } from '../analytics/application/analytics.service';
 import { AnalyticsRepository } from '../analytics/infrastructure/analytics.repository';
 import { AuthModule } from '../auth/auth.module';
+import { DomainsModule } from '../domains/domains.module';
 import { TierLimitGuard } from '../subscriptions/tier-limit.guard';
 import { LinksService } from './application/links.service';
 import { RedirectService } from './application/redirect.service';
@@ -14,7 +15,7 @@ import { LinksController } from './interfaces/links.controller';
 import { ShortenApiController } from './interfaces/shorten-api.controller';
 
 @Module({
-  imports: [AuthModule, ApiKeyModule],
+  imports: [AuthModule, ApiKeyModule, DomainsModule],
   controllers: [LinksController, ShortenApiController],
   providers: [
     AnalyticsRepository,

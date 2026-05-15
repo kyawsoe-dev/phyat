@@ -30,6 +30,8 @@ async function createLink(formData: FormData) {
     customAlias: formData.get("customAlias") || undefined,
     expiresAt: formData.get("expiresAt") || undefined,
     password: formData.get("password") || undefined,
+    generateQR: formData.get("generateQR") === "on",
+    campaignId: formData.get("campaignId") || undefined,
   };
 
   const response = await fetch(`${apiBaseUrl}/links`, {
@@ -53,9 +55,15 @@ function formatCount(n: number): string {
 }
 
 export default async function DashboardContent() {
-  await requireUser();
+  const user = await requireUser();
   const { data: links } = await getLinks();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const now = new Date();
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const linksThisMonth = links.filter((l) => l.createdAt >= thisMonthStart).length;
+  const maxLinks = user.tier.maxLinks;
+  const remaining = maxLinks !== null ? Math.max(0, maxLinks - linksThisMonth) : null;
 
   const totalLinks = links.length;
   const activeLinks = links.filter((l) => l.status === "ACTIVE").length;
@@ -76,7 +84,7 @@ export default async function DashboardContent() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -109,6 +117,25 @@ export default async function DashboardContent() {
             <div>
               <p className="text-sm text-muted-foreground">Total Clicks</p>
               <p className="text-2xl font-bold">{formatCount(totalClicks)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
+              <Plus size={18} className="text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Links Remaining</p>
+              <p className="text-2xl font-bold">
+                {remaining !== null ? remaining : <span className="text-base font-normal text-muted-foreground">Unlimited</span>}
+              </p>
+              {maxLinks !== null && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  of {maxLinks} this month
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -28,6 +28,9 @@ async function createLink(formData: FormData) {
     customAlias: formData.get("customAlias") || undefined,
     expiresAt: formData.get("expiresAt") || undefined,
     password: formData.get("password") || undefined,
+    generateQR: formData.get("generateQR") === "on",
+    campaignId: formData.get("campaignId") || undefined,
+    domainId: formData.get("domainId") || undefined,
   };
 
   const response = await fetch(`${apiBaseUrl}/links`, {
@@ -113,6 +116,29 @@ async function deleteLink(formData: FormData) {
   revalidatePath("/dashboard/links");
 }
 
+async function bulkCreateLinks(formData: FormData) {
+  "use server";
+
+  const raw = formData.get("entries");
+  if (!raw || typeof raw !== "string") return;
+
+  const entries = raw.split("\n").filter(Boolean).map((line) => {
+    const [destination, title, customAlias] = line.split(",").map((s) => s.trim());
+    return { destination, title: title || undefined, customAlias: customAlias || undefined };
+  });
+
+  const response = await fetch(`${apiBaseUrl}/links/bulk`, {
+    method: "POST",
+    headers: { ...authHeaders(), "content-type": "application/json" },
+    body: JSON.stringify(entries),
+  });
+
+  if (!response.ok) throw new Error("Unable to bulk create links.");
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/links");
+}
+
 export default async function LinksContent() {
   await requireUser();
   const { data: links, nextCursor } = await getLinks();
@@ -126,6 +152,7 @@ export default async function LinksContent() {
       deleteAction={deleteLink}
       editAction={editLink}
       createAction={createLink}
+      bulkCreateAction={bulkCreateLinks}
       nextCursor={nextCursor}
     />
   );
