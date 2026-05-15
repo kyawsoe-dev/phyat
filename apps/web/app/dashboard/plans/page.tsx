@@ -283,7 +283,7 @@ export default function PlansPage() {
       </div>
 
       {/* Coupon / Redeem Code */}
-      <div className="max-w-md mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="rounded-xl border border-border bg-background shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
             <Tag size={16} className="text-muted-foreground" />
