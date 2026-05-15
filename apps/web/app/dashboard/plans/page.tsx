@@ -1,63 +1,350 @@
-import type { Metadata } from 'next';
-import { requireUser } from '@/lib/auth';
-import { CreditCard, Check } from 'lucide-react';
-import Link from 'next/link';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { CreditCard, Check, X, Tag, Loader2, Sparkles, Zap, Code2, Percent } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
-const plans = [
-  {
-    name: 'Free',
-    price: '$0',
-    detail: '5 links per month',
-    features: ['Custom aliases', 'QR codes', 'Password links', 'Basic analytics'],
-    current: true,
-  },
-  {
-    name: 'Pro',
-    price: '$13',
-    detail: 'Unlimited links',
-    features: ['Unlimited links', 'Expiration controls', 'Advanced analytics', 'Priority support'],
-    popular: true,
-  },
-  {
-    name: 'Developer',
-    price: '$29',
-    detail: 'API-first workflow',
-    features: ['PH_API_KEY access', 'External shorten API', 'Unlimited links', 'Team-ready limits'],
-  },
-];
-
-export const metadata: Metadata = {
-  title: "Plans",
+type Plan = {
+  code: string;
+  name: string;
+  description: string;
+  priceMonthly: number;
+  priceAnnual: number;
+  maxLinks: number | null;
+  features: string[];
+  annualDiscountPercent: number;
+  monthlyPriceFormatted: string;
+  annualPriceFormatted: string;
+  monthlyPriceLabel: string;
+  annualPriceLabel: string;
 };
 
-export default async function PlansPage() {
-  await requireUser();
+type SubInfo = {
+  id: string;
+  tierCode: string;
+  tierName: string;
+  status: string;
+  billingCycle: string;
+  currentPeriodEnd: string;
+} | null;
+
+const iconMap: Record<string, typeof Sparkles> = {
+  FREE: Sparkles,
+  PRO: Zap,
+  DEVELOPER: Code2,
+};
+
+export default function PlansPage() {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [subscription, setSubscription] = useState<SubInfo>(null);
+  const [billing, setBilling] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null);
+  const [couponStatus, setCouponStatus] = useState<{ valid: boolean; message: string; discountPercent?: number } | null>(null);
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/plans').then((r) => r.json()),
+      fetch('/api/subscriptions/current').then((r) => r.json()),
+    ]).then(([plansData, subData]) => {
+      setPlans(plansData);
+      if (subData && subData.id) setSubscription(subData);
+    });
+  }, []);
+
+  async function checkCoupon() {
+    if (!couponCode.trim()) return;
+    setCheckingCoupon(true);
+    setCouponStatus(null);
+    const res = await fetch('/api/coupons/redeem', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: couponCode.trim() }),
+    });
+    const data = await res.json();
+    setCouponStatus(data);
+    if (data.valid) {
+      setAppliedCouponCode(couponCode.trim());
+      setCouponCode('');
+    }
+    setCheckingCoupon(false);
+  }
+
+  async function upgrade(tierCode: string) {
+    setUpgrading(tierCode);
+    setError(null);
+    const res = await fetch('/api/subscriptions/upgrade', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        tierCode,
+        billingCycle: billing,
+        couponCode: appliedCouponCode,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setSubscription({
+        id: data.id ?? 'new',
+        tierCode: data.tierCode,
+        tierName: plans.find((p) => p.code === data.tierCode)?.name ?? '',
+        status: 'ACTIVE',
+        billingCycle: data.billingCycle,
+        currentPeriodEnd: data.currentPeriodEnd,
+      });
+      setAppliedCouponCode(null);
+      setCouponStatus(null);
+    } else {
+      setError(data.message || 'Upgrade failed');
+    }
+    setUpgrading(null);
+  }
+
+  const currentTierCode = subscription?.tierCode ?? 'FREE';
+  const isCurrent = (code: string) => currentTierCode === code;
+
+  function formatPrice(priceCents: number, discountPercent: number) {
+    const discounted = priceCents - Math.round(priceCents * discountPercent / 100);
+    const dollars = discounted / 100;
+    if (discounted === 0) return '$0';
+    if (dollars >= 1) return `$${dollars.toFixed(0)}`;
+    return `$${dollars.toFixed(2)}`;
+  }
+
+  function formatOriginalPrice(priceCents: number) {
+    const dollars = priceCents / 100;
+    if (priceCents === 0) return '$0';
+    if (dollars >= 1) return `$${dollars.toFixed(0)}`;
+    return `$${dollars.toFixed(2)}`;
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="text-center">
         <CreditCard className="mx-auto text-primary" size={40} />
-        <h2 className="mt-4 text-2xl font-bold">Choose your plan</h2>
-        <p className="mt-2 text-muted-foreground">Upgrade to unlock unlimited links and developer features.</p>
+        <h1 className="mt-4 text-2xl font-bold tracking-tight">Choose your plan</h1>
+        <p className="mt-2 text-muted-foreground">Upgrade to unlock unlimited links, custom domains, and developer features.</p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        {plans.map((plan) => (
-          <div key={plan.name} className={`relative rounded-md border p-6 shadow-sm ${plan.popular ? 'border-primary ring-2 ring-primary/20' : 'border-border'} bg-white`}>
-            {plan.popular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-0.5 text-xs font-bold text-white">Popular</span>}
-            <h3 className="text-xl font-bold">{plan.name}</h3>
-            <p className="mt-2 text-3xl font-bold text-primary">{plan.price}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{plan.detail}</p>
-            <ul className="mt-6 space-y-2">
-              {plan.features.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm"><Check size={16} className="text-primary" />{f}</li>
-              ))}
-            </ul>
-            <Button asChild className={`mt-6 w-full`} variant={plan.current ? 'secondary' : 'primary'} disabled={plan.current}>
-              <Link href={plan.current ? '/dashboard' : '/dashboard/plans'}>{plan.current ? 'Current plan' : 'Upgrade'}</Link>
-            </Button>
+
+      {/* Billing Toggle */}
+      <div className="flex items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={() => setBilling('MONTHLY')}
+          className={cn(
+            'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+            billing === 'MONTHLY' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          Monthly
+        </button>
+        <button
+          type="button"
+          onClick={() => setBilling('ANNUAL')}
+          className={cn(
+            'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+            billing === 'ANNUAL' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          Annual
+          <span className="ml-1.5 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+            Save up to 23%
+          </span>
+        </button>
+      </div>
+
+      {/* Plans Grid */}
+      <div className="grid gap-6 lg:grid-cols-3 max-w-5xl mx-auto">
+        {plans.map((plan) => {
+          const Icon = iconMap[plan.code] ?? Sparkles;
+          const isPro = plan.code === 'PRO';
+          const price = billing === 'ANNUAL' ? plan.annualPriceLabel : plan.monthlyPriceLabel;
+          const rawPrice = billing === 'ANNUAL' ? plan.priceAnnual : plan.priceMonthly;
+          const current = isCurrent(plan.code);
+          const loading = upgrading === plan.code;
+
+          let effectiveDiscount = 0;
+          if (billing === 'ANNUAL') effectiveDiscount = plan.annualDiscountPercent;
+          if (couponStatus?.valid) effectiveDiscount = Math.max(effectiveDiscount, couponStatus.discountPercent ?? 0);
+
+          return (
+            <div
+              key={plan.code}
+              className={cn(
+                'relative flex flex-col rounded-xl border shadow-sm transition-all',
+                isPro ? 'border-primary ring-2 ring-primary/20' : 'border-border',
+                current ? 'ring-2 ring-primary/10' : '',
+              )}
+            >
+              {isPro && (
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-0.5 text-xs font-bold text-primary-foreground">
+                  Popular
+                </span>
+              )}
+              {current && (
+                <span className="absolute top-3 right-3 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  Current
+                </span>
+              )}
+
+              <div className="p-6 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-lg',
+                    plan.code === 'FREE' ? 'bg-muted' : plan.code === 'PRO' ? 'bg-primary/10' : 'bg-purple-100 dark:bg-purple-900/30',
+                  )}>
+                    <Icon size={16} className={cn(
+                      plan.code === 'FREE' ? 'text-muted-foreground' : plan.code === 'PRO' ? 'text-primary' : 'text-purple-600 dark:text-purple-400',
+                    )} />
+                  </div>
+                  <h3 className="text-lg font-semibold">{plan.name}</h3>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">{plan.description}</p>
+
+                <div className="mt-4">
+                  <div className="flex items-baseline gap-1">
+                    {couponStatus?.valid && plan.code !== 'FREE' ? (
+                      <>
+                        <span className="text-lg font-bold text-muted-foreground line-through">
+                          {billing === 'ANNUAL' ? plan.annualPriceFormatted : plan.monthlyPriceFormatted}
+                        </span>
+                        <span className="text-3xl font-bold ml-1">
+                          {formatPrice(rawPrice, effectiveDiscount)}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          /{billing === 'ANNUAL' ? 'yr' : 'mo'}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-3xl font-bold">{price === 'Free' ? '$0' : price}</span>
+                        {plan.code !== 'FREE' && (
+                          <span className="text-sm text-muted-foreground">
+                            /{billing === 'ANNUAL' ? 'yr' : 'mo'}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  {billing === 'ANNUAL' && plan.annualDiscountPercent > 0 && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                      Save {plan.annualDiscountPercent}% vs monthly
+                    </p>
+                  )}
+                  {billing === 'MONTHLY' && plan.priceMonthly > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      ${(plan.priceAnnual / 100).toFixed(0)} billed annually
+                    </p>
+                  )}
+                </div>
+
+                <ul className="mt-5 space-y-2.5">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2 text-sm">
+                      <Check size={15} className="mt-0.5 shrink-0 text-primary" />
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="p-6 pt-0">
+                <Button
+                  className="w-full"
+                  variant={current ? 'secondary' : 'primary'}
+                  disabled={current || loading}
+                  onClick={() => upgrade(plan.code)}
+                >
+                  {loading ? (
+                    <><Loader2 size={16} className="animate-spin" /> Upgrading...</>
+                  ) : current ? (
+                    'Current plan'
+                  ) : (
+                    `Upgrade to ${plan.name}`
+                  )}
+                </Button>
+              </div>
+
+              {/* Discount badge on price */}
+              {effectiveDiscount > 0 && !current && (
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-green-500 px-3 py-0.5 text-xs font-bold text-white shadow-sm">
+                  {effectiveDiscount}% OFF
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Coupon / Redeem Code */}
+      <div className="max-w-md mx-auto">
+        <div className="rounded-xl border border-border bg-background shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Tag size={16} className="text-muted-foreground" />
+            <h3 className="text-sm font-semibold">Redeem Code</h3>
           </div>
-        ))}
+          {appliedCouponCode ? (
+            <div className="flex items-center justify-between rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3">
+              <div className="flex items-center gap-2">
+                <Percent size={14} className="text-green-600" />
+                <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                  {appliedCouponCode} applied ({couponStatus?.discountPercent}% off)
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setAppliedCouponCode(null);
+                  setCouponStatus(null);
+                }}
+                className="h-6 px-2 text-xs"
+              >
+                Clear
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <Input
+                  value={couponCode}
+                  onChange={(e) => { setCouponCode(e.target.value); setCouponStatus(null); }}
+                  placeholder="Enter promo code"
+                  className="flex-1"
+                />
+                <Button variant="secondary" onClick={checkCoupon} disabled={checkingCoupon || !couponCode.trim()}>
+                  {checkingCoupon ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
+                  Apply
+                </Button>
+              </div>
+              {couponStatus && (
+                <div className={cn(
+                  'mt-2 flex items-center gap-1.5 text-sm',
+                  couponStatus.valid ? 'text-green-600' : 'text-red-600',
+                )}>
+                  {couponStatus.valid ? <Check size={14} /> : <X size={14} />}
+                  {couponStatus.message}
+                </div>
+              )}
+            </>
+          )}
+          {error && (
+            <div className="mt-2 text-sm text-red-600">{error}</div>
+          )}
+          {subscription && subscription.billingCycle && (
+            <div className="mt-3 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+              Current plan: <span className="font-medium text-foreground">{subscription.tierName}</span> &middot;{' '}
+              {subscription.billingCycle === 'ANNUAL' ? 'Annual' : 'Monthly'} billing &middot;{' '}
+              Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

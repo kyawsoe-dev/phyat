@@ -18,6 +18,17 @@ enum TierCode {
   DEVELOPER
 }
 
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -29,6 +40,8 @@ model User {
   campaigns    Campaign[]
   domains      Domain[]
   apiKeys      ApiKey[]
+  subscriptions Subscription[]
+  couponRedemptions CouponRedemption[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -36,13 +49,18 @@ model User {
 }
 
 model Tier {
-  id          String   @id @default(cuid())
-  code        TierCode @unique
-  name        String
-  maxLinks    Int?     @map("max_links")
-  users       User[]
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id           String         @id @default(cuid())
+  code         TierCode       @unique
+  name         String
+  maxLinks     Int?           @map("max_links")
+  priceMonthly Int?           @map("price_monthly")
+  priceAnnual  Int?           @map("price_annual")
+  description  String?
+  features     String[]
+  users        User[]
+  subscriptions Subscription[]
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
 
   @@map("tiers")
 }
@@ -123,6 +141,53 @@ model ApiKey {
 
   @@index([userId, createdAt])
   @@map("api_keys")
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  userId            String             @map("user_id")
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tierId            String             @map("tier_id")
+  tier              Tier               @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  status            SubscriptionStatus @default(ACTIVE)
+  billingCycle      BillingCycle       @default(MONTHLY) @map("billing_cycle")
+  currentPeriodStart DateTime          @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime          @map("current_period_end")
+  canceledAt        DateTime?          @map("canceled_at")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([tierId])
+  @@map("subscriptions")
+}
+
+model Coupon {
+  id               String             @id @default(cuid())
+  code             String             @unique
+  discountPercent  Int                @default(0) @map("discount_percent")
+  maxUses          Int                @default(1) @map("max_uses")
+  maxUsesPerUser   Int                @default(1) @map("max_uses_per_user")
+  usedCount        Int                @default(0) @map("used_count")
+  expiresAt        DateTime?          @map("expires_at")
+  isActive         Boolean            @default(true) @map("is_active")
+  redemptions      CouponRedemption[]
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String   @map("coupon_id")
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redeemedAt DateTime @default(now()) @map("redeemed_at")
+
+  @@unique([couponId, userId])
+  @@index([userId])
+  @@map("coupon_redemptions")
 }
 
 model Analytics {

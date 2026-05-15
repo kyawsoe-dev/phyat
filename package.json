@@ -14,7 +14,11 @@
     "apps/api",
     "apps/web"
   ],
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  },
   "devDependencies": {
+    "@types/node": "^25.8.0",
     "prisma": "^5.22.0",
     "typescript": "^5.6.3"
   },

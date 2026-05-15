@@ -54,7 +54,6 @@ export async function requireUser() {
   });
 
   if (!response.ok) {
-    clearToken();
     redirect('/sign-in');
   }
 

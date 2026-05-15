@@ -320,7 +320,7 @@ function ProfileSection({ user, stats }: { user: UserData; stats: Stats }) {
             </p>
           </div>
           <Button variant="secondary" size="sm" asChild>
-            <a href="/pricing">
+            <a href="/dashboard/plans">
               Upgrade <ArrowRight size={14} className="ml-1" />
             </a>
           </Button>

@@ -6,8 +6,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { DomainsModule } from './modules/domains/domains.module';
 import { LinksModule } from './modules/links/links.module';
+import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), AnalyticsModule, AuthModule, ApiKeyModule, CampaignsModule, DomainsModule, LinksModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), AnalyticsModule, AuthModule, ApiKeyModule, CampaignsModule, DomainsModule, LinksModule, SubscriptionsModule],
 })
 export class AppModule {}
