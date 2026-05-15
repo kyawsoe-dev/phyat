@@ -160,7 +160,7 @@ export default function PlansPage() {
       </div>
 
       {/* Plans Grid */}
-      <div className="grid gap-6 lg:grid-cols-3 max-w-5xl mx-auto">
+      <div className="grid gap-6 lg:grid-cols-3 px-4 -mx-4">
         {plans.map((plan) => {
           const Icon = iconMap[plan.code] ?? Sparkles;
           const isPro = plan.code === 'PRO';
@@ -178,8 +178,9 @@ export default function PlansPage() {
               key={plan.code}
               className={cn(
                 'relative flex flex-col rounded-xl border shadow-sm transition-all',
-                isPro ? 'border-primary ring-2 ring-primary/20' : 'border-border',
+                isPro || plan.code === 'DEVELOPER' ? 'border-primary ring-2 ring-primary/20' : 'border-border',
                 current ? 'ring-2 ring-primary/10' : '',
+                plan.code === 'DEVELOPER' ? '' : '',
               )}
             >
               {isPro && (
@@ -283,7 +284,7 @@ export default function PlansPage() {
       </div>
 
       {/* Coupon / Redeem Code */}
-      <div className="max-w-5xl mx-auto">
+      <div className="-mx-4 px-4">
         <div className="rounded-xl border border-border bg-background shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
             <Tag size={16} className="text-muted-foreground" />
@@ -311,18 +312,17 @@ export default function PlansPage() {
             </div>
           ) : (
             <>
-              <div className="flex gap-2">
-                <Input
-                  value={couponCode}
-                  onChange={(e) => { setCouponCode(e.target.value); setCouponStatus(null); }}
-                  placeholder="Enter promo code"
-                  className="flex-1"
-                />
-                <Button variant="secondary" onClick={checkCoupon} disabled={checkingCoupon || !couponCode.trim()}>
-                  {checkingCoupon ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
-                  Apply
-                </Button>
-              </div>
+            <div className="flex flex-col gap-2">
+              <Input
+                value={couponCode}
+                onChange={(e) => { setCouponCode(e.target.value); setCouponStatus(null); }}
+                placeholder="Enter promo code"
+              />
+              <Button variant="secondary" onClick={checkCoupon} disabled={checkingCoupon || !couponCode.trim()} className="w-full">
+                {checkingCoupon ? <Loader2 size={14} className="animate-spin" /> : <Tag size={14} />}
+                Apply
+              </Button>
+            </div>
               {couponStatus && (
                 <div className={cn(
                   'mt-2 flex items-center gap-1.5 text-sm',
