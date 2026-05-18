@@ -18,9 +18,9 @@ export function Button({ className, asChild, variant = 'primary', size = 'md', .
         size === 'md' && 'h-10 px-4 text-sm',
         size === 'lg' && 'h-12 px-6 text-base',
         variant === 'primary' && 'bg-primary text-primary-foreground hover:bg-primary/90',
-        variant === 'secondary' && 'border border-border bg-white text-foreground hover:bg-muted',
-        variant === 'ghost' && 'hover:bg-muted',
-        variant === 'destructive' && 'bg-red-600 text-white hover:bg-red-700',
+        variant === 'secondary' && 'border border-border bg-card text-card-foreground shadow-sm hover:bg-muted',
+        variant === 'ghost' && 'text-foreground hover:bg-muted',
+        variant === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         className,
       )}
       {...props}

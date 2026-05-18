@@ -84,7 +84,7 @@ export default async function DashboardContent() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
               <Link2 size={18} className="text-primary" />
@@ -96,7 +96,7 @@ export default async function DashboardContent() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/30">
               <Activity size={18} className="text-green-600 dark:text-green-400" />
@@ -108,7 +108,7 @@ export default async function DashboardContent() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-900/30">
               <MousePointerClick size={18} className="text-amber-600 dark:text-amber-400" />
@@ -120,7 +120,7 @@ export default async function DashboardContent() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/30">
               <Plus size={18} className="text-blue-600 dark:text-blue-400" />
@@ -141,7 +141,7 @@ export default async function DashboardContent() {
       </div>
 
       {/* Recent Links */}
-      <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div>
             <h2 className="text-sm font-semibold">Recent Links</h2>

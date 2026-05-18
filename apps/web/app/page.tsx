@@ -73,7 +73,7 @@ export default async function HomePage() {
         <div className="mt-12 grid gap-6 md:grid-cols-2">
           {platformFeatures.map((feature) => (
             <article key={feature.title} className={`rounded-md border p-7 ${feature.tone}`}>
-              <feature.icon size={42} className="rounded-md bg-[hsl(var(--card))] p-2 shadow-sm" />
+              <feature.icon size={42} className="rounded-md bg-card p-2 shadow-sm" />
               <h3 className="mt-5 text-xl font-semibold text-foreground">{feature.title}</h3>
               <p className="mt-2 leading-7 text-muted-foreground">{feature.copy}</p>
             </article>
@@ -86,7 +86,7 @@ export default async function HomePage() {
             [KeyRound, 'Robust API', 'Use PH_API_KEY with the external shorten endpoint.'],
           ] as const).map(([Icon, title, copy]) => (
             <div key={title} className="text-center">
-              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-[hsl(var(--card))] text-primary">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-md bg-card text-primary">
                 <Icon size={22} />
               </span>
               <h3 className="mt-4 font-semibold">{title}</h3>
@@ -110,7 +110,7 @@ export default async function HomePage() {
               ['8.5%', 'Conversion rate', 'Track campaign performance'],
               ['Yangon', 'Top city', 'Mock GeoIP insight'],
             ] as const).map(([value, label, copy]) => (
-              <div key={label} className="rounded-md border border-border bg-background p-6 shadow-sm">
+              <div key={label} className="rounded-md border border-border bg-card p-6 shadow-sm">
                 <p className="text-4xl font-bold text-primary">{value}</p>
                 <h3 className="mt-3 font-semibold">{label}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{copy}</p>
@@ -139,7 +139,7 @@ export default async function HomePage() {
           </div>
         </div>
         <div className="rounded-md bg-primary/10 p-8">
-          <div className="rotate-2 rounded-md bg-[hsl(var(--card))] p-6 shadow-lg">
+          <div className="rotate-2 rounded-md bg-card p-6 shadow-lg">
             <p className="text-sm text-muted-foreground">Your Custom Link</p>
             <p className="mt-2 text-xl font-bold text-primary">phyat.app/promo2026</p>
             <div className="mt-5 h-3 rounded-full bg-muted">

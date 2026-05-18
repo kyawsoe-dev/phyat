@@ -114,7 +114,7 @@ export function PlansSection({ user }: { user?: UserLike }) {
               const isLoading = checkoutCode === plan.code;
 
               return (
-                <div key={plan.code} className={cn("relative flex flex-col rounded-xl border shadow-sm transition-all bg-[hsl(var(--card))]", isPopular ? "border-primary ring-2 ring-primary/10" : "border-border")}>
+                <div key={plan.code} className={cn("relative flex flex-col rounded-xl border shadow-sm transition-all bg-card", isPopular ? "border-primary ring-2 ring-primary/10" : "border-border")}>
                   {isPopular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-0.5 text-xs font-bold text-primary-foreground">Popular</span>}
                   {isCurrent && <span className="absolute top-3 right-3 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Current</span>}
 

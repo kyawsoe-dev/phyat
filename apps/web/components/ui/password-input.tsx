@@ -14,7 +14,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, React.InputHTMLA
           ref={ref}
           type={show ? 'text' : 'password'}
           className={cn(
-            'h-10 w-full rounded-md border border-border bg-white px-3 pr-10 text-sm outline-none transition focus:ring-2 focus:ring-primary',
+            'h-10 w-full rounded-md border border-border bg-card px-3 pr-10 text-sm text-card-foreground outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/25',
             className,
           )}
           {...props}

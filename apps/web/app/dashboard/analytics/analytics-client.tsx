@@ -58,7 +58,7 @@ export function AnalyticsClient({ links }: { links: LinkRow[] }) {
 
   return (
     <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-      <div className="rounded-md border border-border bg-white shadow-sm h-fit xl:sticky xl:top-[88px]">
+      <div className="rounded-md border border-border bg-card shadow-sm h-fit xl:sticky xl:top-[88px]">
         <div className="border-b border-border px-4 py-3 font-medium text-sm text-muted-foreground">Links</div>
         <div className="max-h-[600px] overflow-y-auto">
           {links.map((link) => (
@@ -86,7 +86,7 @@ export function AnalyticsClient({ links }: { links: LinkRow[] }) {
         </div>
       </div>
 
-      <div className="rounded-md border border-border bg-white p-5 shadow-sm">
+      <div className="rounded-md border border-border bg-card p-5 shadow-sm">
         {loading ? (
           <LoadingSpinner className="py-20" />
         ) : !stats ? (

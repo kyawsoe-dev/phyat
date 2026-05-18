@@ -52,7 +52,7 @@ export function PasswordForm({
 
       <form
         onSubmit={submit}
-        className="w-full max-w-sm rounded-md border border-border bg-white p-6 shadow-sm"
+        className="w-full max-w-sm rounded-md border border-border bg-card p-6 shadow-soft"
       >
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted">

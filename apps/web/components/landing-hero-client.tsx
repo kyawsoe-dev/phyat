@@ -108,7 +108,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-20 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:bg-gray-950/95 dark:supports-[backdrop-filter]:bg-gray-950/80">
+      <header className="fixed top-0 left-0 right-0 z-20 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
           {/* Left side */}
           <div className="flex items-center gap-3">
@@ -154,7 +154,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
                 </button>
 
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 w-56 rounded-md border border-border bg-white shadow-lg z-50 py-1 dark:bg-gray-950">
+                  <div className="absolute right-0 top-full mt-1.5 w-56 rounded-md border border-border bg-card shadow-lg z-50 py-1">
                     <div className="border-b border-border px-4 py-3">
                       <p className="text-sm font-medium">{user.name || 'User'}</p>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -215,7 +215,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button className="absolute inset-0 bg-black/40" type="button" aria-label="Close navigation menu" onClick={() => setOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-dvh w-[min(84vw,340px)] flex-col border-r border-border bg-white p-5 shadow-2xl dark:bg-gray-950">
+          <aside className="absolute left-0 top-0 flex h-dvh w-[min(84vw,340px)] flex-col border-r border-border bg-card p-5 shadow-2xl">
             <div className="flex items-center justify-between">
               <Logo href="/" className="flex-col" showText={false} onClick={() => setOpen(false)} />
               <button className="rounded-md border border-border p-2" type="button" aria-label="Close navigation menu" onClick={() => setOpen(false)}>
@@ -315,7 +315,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
         <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(hsl(166_74%_70%)_1px,transparent_1px)] [background-size:42px_42px]" />
         <section className="mx-auto max-w-6xl px-6 pt-24 pb-16">
           <div className="text-center">
-          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-[hsl(var(--card))] px-3 py-1 text-sm font-medium text-muted-foreground shadow-sm">
+          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-sm font-medium text-muted-foreground shadow-sm">
             <Sparkles size={15} className="text-primary" /> Link management for Myanmar builders
           </div>
           <h1 className="mx-auto text-3xl font-bold tracking-normal text-foreground md:text-5xl md:whitespace-nowrap">
@@ -325,7 +325,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
             Shorten, customize, protect, and track links with a clean dashboard and developer-ready API.
           </p>
 
-          <div className="mx-auto mt-9 rounded-md border border-border bg-[hsl(var(--card))] p-5 text-left shadow-xl">
+          <div className="mx-auto mt-9 rounded-md border border-border bg-card p-5 text-left shadow-xl">
             {error && (
               <div className="mb-4 flex items-center gap-2 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-400">
                 <AlertCircle size={16} className="shrink-0" />
@@ -371,7 +371,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
                 [Clock3, 'Set Expiration'],
                 [QrCode, 'Generate QR Code'],
               ].map(([Icon, label]) => (
-                <div key={label as string} className="flex min-h-24 items-center justify-center gap-3 rounded-md border border-border bg-[hsl(var(--card))] px-3 text-sm font-semibold">
+                <div key={label as string} className="flex min-h-24 items-center justify-center gap-3 rounded-md border border-border bg-card px-3 text-sm font-semibold">
                   <span className="flex h-9 w-9 items-center justify-center rounded-md bg-muted text-primary">
                     <Icon size={18} />
                   </span>

@@ -248,7 +248,7 @@ export default function CampaignsPage() {
     return (
       <div className="space-y-1">
         <label className="text-sm font-medium">Links</label>
-        <div className="rounded-lg border border-border bg-background max-h-48 overflow-y-auto">
+        <div className="rounded-lg border border-border bg-card max-h-48 overflow-y-auto">
           {availableLinks.length === 0 && !showNewLinkForm && (
             <p className="p-3 text-xs text-muted-foreground text-center">No links available</p>
           )}
@@ -327,7 +327,7 @@ export default function CampaignsPage() {
     return (
       <div
         key={c.id}
-        className={`rounded-xl border border-border bg-background shadow-sm transition-colors ${
+        className={`rounded-xl border border-border bg-card shadow-sm transition-colors ${
           isSelected ? 'ring-2 ring-primary' : ''
         }`}
       >
@@ -438,15 +438,15 @@ export default function CampaignsPage() {
 
                 {campaignStats && (
                   <div className="grid gap-4 sm:grid-cols-3">
-                    <div className="rounded-lg border border-border bg-background p-4">
+                    <div className="rounded-lg border border-border bg-card p-4">
                       <p className="text-xs text-muted-foreground">Total Clicks</p>
                       <p className="text-2xl font-bold">{formatCount(campaignStats.totalClicks)}</p>
                     </div>
-                    <div className="rounded-lg border border-border bg-background p-4">
+                    <div className="rounded-lg border border-border bg-card p-4">
                       <p className="text-xs text-muted-foreground">Desktop</p>
                       <p className="text-2xl font-bold">{formatCount(campaignStats.byDevice.desktop)}</p>
                     </div>
-                    <div className="rounded-lg border border-border bg-background p-4">
+                    <div className="rounded-lg border border-border bg-card p-4">
                       <p className="text-xs text-muted-foreground">Mobile</p>
                       <p className="text-2xl font-bold">{formatCount(campaignStats.byDevice.mobile)}</p>
                     </div>
@@ -465,7 +465,7 @@ export default function CampaignsPage() {
                 {campaignLinks.length > 0 ? (
                   <div className="space-y-2">
                     {campaignLinks.map((link: any) => (
-                      <div key={link.id} className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3 text-sm">
+                      <div key={link.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm">
                         <div className="min-w-0 flex-1">
                           <p className="font-medium truncate">{link.title || link.slug}</p>
                           <p className="text-xs text-muted-foreground truncate">{link.destination}</p>
@@ -601,7 +601,7 @@ export default function CampaignsPage() {
       {loading ? (
         <LoadingSpinner className="py-20" />
       ) : campaigns.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 py-20 text-center rounded-xl border border-border bg-background shadow-sm">
+        <div className="flex flex-col items-center gap-4 py-20 text-center rounded-xl border border-border bg-card shadow-sm">
           <Megaphone size={64} className="text-muted-foreground" />
           <h2 className="text-xl font-semibold">No campaigns yet</h2>
           <p className="text-muted-foreground">Create your first campaign to organize your links.</p>

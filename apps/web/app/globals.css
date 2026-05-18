@@ -3,32 +3,61 @@
 @tailwind utilities;
 
 :root {
-  --background: 210 25% 98%;
-  --foreground: 220 24% 12%;
-  --muted: 210 20% 93%;
-  --muted-foreground: 216 12% 42%;
-  --primary: 166 74% 28%;
+  --background: 210 32% 97%;
+  --foreground: 222 42% 10%;
+  --muted: 210 24% 92%;
+  --muted-foreground: 215 14% 39%;
+  --primary: 169 78% 30%;
   --primary-foreground: 0 0% 100%;
-  --border: 214 18% 84%;
+  --border: 214 22% 84%;
   --card: 0 0% 100%;
-  --card-foreground: 220 24% 12%;
+  --card-foreground: 222 42% 10%;
+  --accent: 213 92% 56%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
 }
 
 .dark {
-  --background: 220 24% 10%;
-  --foreground: 210 25% 96%;
-  --muted: 218 20% 18%;
-  --muted-foreground: 215 15% 70%;
-  --primary: 164 72% 42%;
-  --primary-foreground: 220 24% 8%;
-  --border: 218 18% 25%;
-  --card: 220 22% 13%;
-  --card-foreground: 210 25% 96%;
+  --background: 222 34% 8%;
+  --foreground: 210 30% 96%;
+  --muted: 220 22% 16%;
+  --muted-foreground: 215 16% 72%;
+  --primary: 166 72% 45%;
+  --primary-foreground: 222 34% 8%;
+  --border: 220 20% 24%;
+  --card: 222 28% 12%;
+  --card-foreground: 210 30% 96%;
+  --accent: 205 92% 62%;
+  --accent-foreground: 222 34% 8%;
+  --destructive: 0 70% 58%;
+  --destructive-foreground: 0 0% 100%;
+}
+
+* {
+  border-color: hsl(var(--border));
+}
+
+html {
+  background: hsl(var(--background));
 }
 
 body {
-  background: hsl(var(--background));
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--muted) / 0.42) 100%);
   color: hsl(var(--foreground));
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: hsl(var(--primary) / 0.22);
+  color: hsl(var(--foreground));
+}
+
+::placeholder {
+  color: hsl(var(--muted-foreground));
+  opacity: 0.76;
 }
 
 body,
@@ -37,6 +66,9 @@ section,
 article,
 form,
 button,
-a {
-  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+a,
+input,
+textarea,
+select {
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }

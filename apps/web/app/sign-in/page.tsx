@@ -16,7 +16,7 @@ export default function SignInPage() {
     <main className="flex min-h-screen items-center justify-center px-6">
       <form
         action={formAction}
-        className="w-full max-w-sm rounded-md border border-border bg-white p-6 shadow-sm"
+        className="w-full max-w-sm rounded-md border border-border bg-card p-6 shadow-soft"
       >
         <div className="mb-6 flex flex-col items-center gap-1">
           <Logo className="flex-col" showText={false} />

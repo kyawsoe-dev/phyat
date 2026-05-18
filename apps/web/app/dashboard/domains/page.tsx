@@ -140,7 +140,7 @@ export default function DomainsPage() {
       {loading ? (
         <LoadingSpinner className="py-20" />
       ) : domains.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 py-20 text-center rounded-xl border border-border bg-background shadow-sm">
+        <div className="flex flex-col items-center gap-4 py-20 text-center rounded-xl border border-border bg-card shadow-sm">
           <Globe size={64} className="text-muted-foreground" />
           <h2 className="text-xl font-semibold">No custom domains</h2>
           <p className="text-muted-foreground">
@@ -151,7 +151,7 @@ export default function DomainsPage() {
       ) : (
         <div className="space-y-4">
           {/* Setup Instructions */}
-          <div className="rounded-xl border border-border bg-background shadow-sm p-5">
+          <div className="rounded-xl border border-border bg-card shadow-sm p-5">
             <h3 className="text-sm font-semibold mb-2">How to set up a custom domain</h3>
             <ol className="space-y-1.5 text-sm text-muted-foreground list-decimal list-inside">
               <li>Add your domain below</li>
@@ -164,7 +164,7 @@ export default function DomainsPage() {
           {domains.map((d) => (
             <div
               key={d.id}
-              className={`rounded-xl border bg-background shadow-sm ${
+              className={`rounded-xl border bg-card shadow-sm ${
                 d.verified ? 'border-border' : 'border-amber-200 dark:border-amber-800'
               }`}
             >

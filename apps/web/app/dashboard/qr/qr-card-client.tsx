@@ -7,7 +7,7 @@ import {
   Check,
   Power,
   BarChart3,
-  Image,
+  ImageIcon,
   Link,
   Pen,
   Monitor,
@@ -111,7 +111,7 @@ export function QRCardClient({
   }
 
   return (
-    <div className="rounded-md border border-border bg-white shadow-sm overflow-hidden">
+    <div className="rounded-md border border-border bg-card shadow-sm overflow-hidden">
       {/* Main Card */}
       <div className="p-4">
         {/* Header: Status + Clicks */}
@@ -159,7 +159,7 @@ export function QRCardClient({
           </a>
 
           <Button variant="ghost" size="sm" onClick={copyDataUrl} title="Copy QR image">
-            {copiedDataUrl ? <Check size={14} className="text-green-600" /> : <Image size={14} />}
+            {copiedDataUrl ? <Check size={14} className="text-green-600" /> : <ImageIcon size={14} />}
           </Button>
 
           <Button variant="ghost" size="sm" onClick={copyShortUrl} title="Copy short URL">

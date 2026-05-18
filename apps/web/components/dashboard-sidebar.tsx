@@ -35,7 +35,7 @@ export function DashboardSidebar() {
   return (
     <aside
       className={cn(
-        'hidden lg:flex flex-col border-r border-border bg-[hsl(var(--card))] transition-all duration-200 sticky top-16 h-[calc(100vh-4rem)] self-start',
+        'hidden lg:flex flex-col border-r border-border bg-card transition-all duration-200 sticky top-16 h-[calc(100vh-4rem)] self-start',
         collapsed ? 'w-16' : 'w-60',
       )}
     >

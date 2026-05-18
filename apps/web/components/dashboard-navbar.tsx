@@ -119,7 +119,7 @@ export function DashboardNavbar({ user }: { user: NavUser }) {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 w-56 rounded-md border border-border bg-[hsl(var(--card))] shadow-lg z-50 py-1">
+                <div className="absolute right-0 top-full mt-1.5 w-56 rounded-md border border-border bg-card shadow-lg z-50 py-1">
                   <div className="border-b border-border px-4 py-3">
                     <p className="text-sm font-medium">{user.name || 'User'}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -168,7 +168,7 @@ export function DashboardNavbar({ user }: { user: NavUser }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-dvh w-[min(84vw,340px)] flex-col border-r border-border bg-[hsl(var(--card))] p-5 shadow-2xl">
+          <aside className="absolute left-0 top-0 flex h-dvh w-[min(84vw,340px)] flex-col border-r border-border bg-card p-5 shadow-2xl">
             <div className="flex items-center justify-between">
               <Logo href="/dashboard" className="flex-col" showText={false} />
               <button

@@ -57,14 +57,14 @@ export function AnalyticsCharts({ stats }: { stats: Stats }) {
   return (
     <div className="space-y-6">
       {/* Total clicks */}
-      <div className="rounded-lg border border-border bg-background p-4">
+      <div className="rounded-lg border border-border bg-card p-4">
         <p className="text-sm text-muted-foreground">Total clicks</p>
         <p className="text-3xl font-bold">{stats.totalClicks}</p>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2">
         {/* Device Breakdown */}
-        <div className="rounded-lg border border-border bg-background p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <h4 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <Monitor size={14} /> Engagements by Device
           </h4>
@@ -105,7 +105,7 @@ export function AnalyticsCharts({ stats }: { stats: Stats }) {
         </div>
 
         {/* Over Time */}
-        <div className="rounded-lg border border-border bg-background p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <h4 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <CalendarDays size={14} /> Engagements over Time
           </h4>
@@ -132,7 +132,7 @@ export function AnalyticsCharts({ stats }: { stats: Stats }) {
         </div>
 
         {/* By Referrer */}
-        <div className="rounded-lg border border-border bg-background p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <h4 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <LinkIcon size={14} /> Engagements by Referrer
           </h4>
@@ -152,7 +152,7 @@ export function AnalyticsCharts({ stats }: { stats: Stats }) {
         </div>
 
         {/* By Location */}
-        <div className="rounded-lg border border-border bg-background p-4">
+        <div className="rounded-lg border border-border bg-card p-4">
           <h4 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <MapPin size={14} /> Engagements by Location
           </h4>

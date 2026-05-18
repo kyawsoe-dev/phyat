@@ -37,7 +37,7 @@ export function DeveloperApiPanel({ apiKeys }: { apiKeys: ApiKeyRow[] }) {
   }
 
   return (
-    <section className="rounded-md border border-border bg-white p-5 shadow-sm">
+    <section className="rounded-md border border-border bg-card p-5 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
         <KeyRound size={18} />
         <h2 className="text-lg font-semibold">Developer API</h2>
@@ -51,7 +51,7 @@ export function DeveloperApiPanel({ apiKeys }: { apiKeys: ApiKeyRow[] }) {
       {secret && (
         <div className="mt-4 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
           <p className="font-medium">Copy this key now. It will not be shown again.</p>
-          <code className="mt-2 block overflow-x-auto rounded-sm bg-white px-2 py-2 text-xs">{secret}</code>
+          <code className="mt-2 block overflow-x-auto rounded-sm bg-muted px-2 py-2 text-xs">{secret}</code>
         </div>
       )}
       <div className="mt-4 space-y-2">

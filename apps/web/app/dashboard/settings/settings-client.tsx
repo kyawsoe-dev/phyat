@@ -125,7 +125,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
   return (
     <div className="space-y-6">
       {/* Profile Header */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
@@ -177,7 +177,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
       </div>
 
       {/* Personal Information */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6">
           <h3 className="text-sm font-semibold">Personal Information</h3>
           {editing ? (
@@ -221,7 +221,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
       </div>
 
       {usage && (
-        <div className="rounded-xl border border-border bg-background shadow-sm">
+        <div className="rounded-xl border border-border bg-card shadow-sm">
           <div className="p-6">
             <h3 className="text-sm font-semibold">Monthly Usage</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -247,7 +247,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
       )}
 
       {/* Account Stats */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6">
           <h3 className="text-sm font-semibold">Account Stats</h3>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -276,7 +276,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
       </div>
 
       {/* Quick Actions */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6">
           <h3 className="text-sm font-semibold">Quick Actions</h3>
           <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -341,7 +341,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
       </div>
 
       {/* Plans */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold">Current Plan</h3>
@@ -401,7 +401,7 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-background shadow-sm">
+    <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="p-6">
         <div className="flex items-center gap-2">
           <KeyRound size={18} className="text-muted-foreground" />
@@ -452,7 +452,7 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
               {keys.length} active key{keys.length !== 1 ? 's' : ''}
             </p>
             {keys.map((key) => (
-              <div key={key.id} className="flex items-center justify-between rounded-lg border border-border bg-background px-4 py-3 text-sm">
+              <div key={key.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{key.name}</p>
                   <p className="text-xs text-muted-foreground font-mono">
@@ -517,7 +517,7 @@ function NotificationsSection() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-background shadow-sm">
+    <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="p-6">
         <div className="flex items-center gap-2">
           <Bell size={18} className="text-muted-foreground" />
@@ -612,7 +612,7 @@ function SecuritySection({ user }: { user: UserData }) {
   return (
     <div className="space-y-6">
       {/* Password */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6">
           <div className="flex items-center gap-2">
             <Shield size={18} className="text-muted-foreground" />
@@ -675,7 +675,7 @@ function SecuritySection({ user }: { user: UserData }) {
       </div>
 
       {/* Account Info */}
-      <div className="rounded-xl border border-border bg-background shadow-sm">
+      <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6">
           <h3 className="text-sm font-semibold">Account Security</h3>
           <div className="mt-4 space-y-3 text-sm">

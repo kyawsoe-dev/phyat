@@ -277,7 +277,7 @@ export function QRContent({
       )}
 
       {/* Search & Filters */}
-      <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         <div className="border-b border-border px-4 py-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[200px] flex-1">

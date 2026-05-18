@@ -246,7 +246,7 @@ export function LinkTable({
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         {/* Search & Filters */}
         <div className="border-b border-border px-4 py-4">
           <div className="flex flex-wrap items-center gap-3">

@@ -41,21 +41,21 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-md border border-border bg-white p-5 shadow-sm">
+        <div className="rounded-md border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <MousePointerClick size={20} className="text-primary" />
             <span className="text-sm text-muted-foreground">Total clicks</span>
           </div>
           <p className="mt-2 text-3xl font-bold">{totalClicks}</p>
         </div>
-        <div className="rounded-md border border-border bg-white p-5 shadow-sm">
+        <div className="rounded-md border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <BarChart3 size={20} className="text-primary" />
             <span className="text-sm text-muted-foreground">Total links</span>
           </div>
           <p className="mt-2 text-3xl font-bold">{links.length}</p>
         </div>
-        <div className="rounded-md border border-border bg-white p-5 shadow-sm">
+        <div className="rounded-md border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <Globe2 size={20} className="text-primary" />
             <span className="text-sm text-muted-foreground">Active links</span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   CreditCard,
@@ -66,6 +66,52 @@ export default function PlansPage() {
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [upgradingCode, setUpgradingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const autoCheckoutKey = useRef<string | null>(null);
+
+  const startCheckout = useCallback(async (tierCode: string, billingCycle = billing) => {
+    setError(null);
+    setUpgradingCode(tierCode);
+    try {
+      const res = await fetch("/api/subscriptions/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          tierCode,
+          billingCycle,
+          couponCode: appliedCouponCode,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Checkout init failed");
+        setUpgradingCode(null);
+        return;
+      }
+
+      if (data.immediate) {
+        const subRes = await fetch("/api/subscriptions/current", {
+          cache: "no-store",
+        });
+        const subData = await subRes.json();
+        if (subData?.id) setSubscription(subData);
+        setAppliedCouponCode(null);
+        setCouponStatus(null);
+        setUpgradingCode(null);
+        return;
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError("No checkout URL returned. Please try again.");
+        setUpgradingCode(null);
+      }
+    } catch (err: any) {
+      setError(err.message ?? "Unexpected error");
+      setUpgradingCode(null);
+    }
+  }, [appliedCouponCode, billing]);
 
   // Check URL for payment status on mount
   useEffect(() => {
@@ -83,9 +129,14 @@ export default function PlansPage() {
         .catch(() => {});
     }
     if ((requestedTier === "PRO" || requestedTier === "DEVELOPER") && checkoutStatus !== "success" && checkoutStatus !== "cancelled") {
-      window.setTimeout(() => startCheckout(requestedTier), 0);
+      const requestedCycle = requestedBilling === "ANNUAL" ? "ANNUAL" : "MONTHLY";
+      const checkoutKey = `${requestedTier}:${requestedCycle}`;
+      if (autoCheckoutKey.current !== checkoutKey) {
+        autoCheckoutKey.current = checkoutKey;
+        window.setTimeout(() => startCheckout(requestedTier, requestedCycle), 0);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, startCheckout]);
 
   useEffect(() => {
     fetch("/api/plans", { cache: "no-store" })
@@ -117,53 +168,6 @@ export default function PlansPage() {
       setCouponCode("");
     }
     setCheckingCoupon(false);
-  }
-
-  async function startCheckout(tierCode: string) {
-    setError(null);
-    setUpgradingCode(tierCode);
-    try {
-      const res = await fetch("/api/subscriptions/checkout", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          tierCode,
-          billingCycle: billing,
-          couponCode: appliedCouponCode,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.message || "Checkout init failed");
-        setUpgradingCode(null);
-        return;
-      }
-
-      if (data.immediate) {
-        // Free tier or zero-price – DB write already succeeded; refresh UI
-        const subRes = await fetch("/api/subscriptions/current", {
-          cache: "no-store",
-        });
-        const subData = await subRes.json();
-        if (subData?.id) setSubscription(subData);
-        setAppliedCouponCode(null);
-        setCouponStatus(null);
-        setUpgradingCode(null);
-        return;
-      }
-
-      // Redirect to Stripe Checkout
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setError("No checkout URL returned. Please try again.");
-        setUpgradingCode(null);
-      }
-    } catch (err: any) {
-      setError(err.message ?? "Unexpected error");
-      setUpgradingCode(null);
-    }
   }
 
   const currentTierCode = subscription?.tierCode ?? "FREE";
@@ -389,7 +393,7 @@ export default function PlansPage() {
 
       {/* Coupon / Redeem Code */}
       <div className="-mx-4 px-4">
-        <div className="rounded-xl border border-border bg-background shadow-sm p-5">
+        <div className="rounded-xl border border-border bg-card shadow-sm p-5">
           <div className="flex items-center gap-2 mb-3">
             <Tag size={16} className="text-muted-foreground" />
             <h3 className="text-sm font-semibold">Redeem Code</h3>
