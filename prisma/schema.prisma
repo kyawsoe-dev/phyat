@@ -302,6 +302,8 @@ model Subscription {
   currentPeriodStart DateTime          @default(now()) @map("current_period_start")
   currentPeriodEnd   DateTime          @map("current_period_end")
   canceledAt        DateTime?          @map("canceled_at")
+  stripeCustomerId   String?            @map("stripe_customer_id")
+  stripeSubscriptionId String?         @map("stripe_subscription_id")
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
 

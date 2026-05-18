@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/auth';
 import { LandingHeroClient } from '@/components/landing-hero-client';
+import { PlansSection } from '@/components/plans-section';
 
 const stats = [
   ['10M+', 'Links shortened'],
@@ -48,27 +49,7 @@ const platformFeatures = [
   },
 ];
 
-const plans = [
-  {
-    name: 'Free',
-    price: '$0',
-    detail: '5 links per month',
-    features: ['Custom aliases', 'QR codes', 'Password links', 'Basic analytics'],
-  },
-  {
-    name: 'Pro',
-    price: '$13',
-    detail: 'Unlimited links',
-    features: ['Unlimited links', 'Expiration controls', 'Advanced analytics', 'Priority support'],
-    popular: true,
-  },
-  {
-    name: 'Developer',
-    price: '$29',
-    detail: 'API-first workflow',
-    features: ['PH_API_KEY access', 'External shorten API', 'Unlimited links', 'Team-ready limits'],
-  },
-];
+
 
 export const metadata: Metadata = {
   title: 'URL Shortener for Myanmar Builders',
@@ -169,36 +150,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section id="plans" className="border-t border-border bg-[hsl(var(--muted)/0.65)] px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold">Choose your Plan</h2>
-            <p className="mt-3 text-lg text-muted-foreground">Start small, then unlock unlimited links or developer access.</p>
-          </div>
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {plans.map((plan) => (
-              <article key={plan.name} className={`relative rounded-md border bg-[hsl(var(--card))] p-7 shadow-sm ${plan.popular ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
-                {plan.popular && (
-                  <span className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-xs font-bold uppercase text-white">Popular</span>
-                )}
-                <h3 className="text-2xl font-bold">{plan.name}</h3>
-                <p className="mt-4 text-4xl font-bold text-primary">{plan.price}</p>
-                <p className="mt-1 text-muted-foreground">{plan.detail}</p>
-                <div className="mt-6 space-y-3">
-                  {plan.features.map((feature) => (
-                    <p key={feature} className="flex items-center gap-3 text-sm">
-                      <Check size={17} className="text-primary" /> {feature}
-                    </p>
-                  ))}
-                </div>
-                <Button asChild className="mt-7 w-full" variant={plan.popular ? 'primary' : 'secondary'}>
-                  <Link href="/sign-up">Choose {plan.name}</Link>
-                </Button>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PlansSection />
     </main>
   );
 }

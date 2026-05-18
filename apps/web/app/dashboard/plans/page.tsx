@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Check, X, Tag, Loader2, Sparkles, Zap, Code2, Percent } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,9 @@ const iconMap: Record<string, typeof Sparkles> = {
 };
 
 export default function PlansPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [plans, setPlans] = useState<Plan[]>([]);
   const [subscription, setSubscription] = useState<SubInfo>(null);
   const [billing, setBilling] = useState<'MONTHLY' | 'ANNUAL'>('MONTHLY');
@@ -44,17 +48,33 @@ export default function PlansPage() {
   const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null);
   const [couponStatus, setCouponStatus] = useState<{ valid: boolean; message: string; discountPercent?: number } | null>(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
-  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [upgradingCode, setUpgradingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Check URL for payment status on mount
   useEffect(() => {
-    Promise.all([
-      fetch('/api/plans').then((r) => r.json()),
-      fetch('/api/subscriptions/current').then((r) => r.json()),
-    ]).then(([plansData, subData]) => {
-      setPlans(plansData);
-      if (subData && subData.id) setSubscription(subData);
-    });
+    const checkoutStatus = searchParams.get('checkout');
+    if (checkoutStatus === 'success' || checkoutStatus === 'cancelled') {
+      // Refresh subscription to reflect latest state
+      fetch('/api/subscriptions/current', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then(setSubscription)
+        .catch(() => {});
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    fetch('/api/plans', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((plansData) => {
+        setPlans(plansData);
+        return fetch('/api/subscriptions/current', { cache: 'no-store' });
+      })
+      .then((r) => r.json())
+      .then((subData) => {
+        if (subData && subData.id) setSubscription(subData);
+      })
+      .catch(() => {});
   }, []);
 
   async function checkCoupon() {
@@ -75,34 +95,49 @@ export default function PlansPage() {
     setCheckingCoupon(false);
   }
 
-  async function upgrade(tierCode: string) {
-    setUpgrading(tierCode);
+  async function startCheckout(tierCode: string) {
     setError(null);
-    const res = await fetch('/api/subscriptions/upgrade', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        tierCode,
-        billingCycle: billing,
-        couponCode: appliedCouponCode,
-      }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setSubscription({
-        id: data.id ?? 'new',
-        tierCode: data.tierCode,
-        tierName: plans.find((p) => p.code === data.tierCode)?.name ?? '',
-        status: 'ACTIVE',
-        billingCycle: data.billingCycle,
-        currentPeriodEnd: data.currentPeriodEnd,
+    setUpgradingCode(tierCode);
+    try {
+      const res = await fetch('/api/subscriptions/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          tierCode,
+          billingCycle: billing,
+          couponCode: appliedCouponCode,
+        }),
       });
-      setAppliedCouponCode(null);
-      setCouponStatus(null);
-    } else {
-      setError(data.message || 'Upgrade failed');
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || 'Checkout init failed');
+        setUpgradingCode(null);
+        return;
+      }
+
+      if (data.immediate) {
+        // Free tier or zero-price – DB write already succeeded; refresh UI
+        const subRes = await fetch('/api/subscriptions/current', { cache: 'no-store' });
+        const subData = await subRes.json();
+        if (subData?.id) setSubscription(subData);
+        setAppliedCouponCode(null);
+        setCouponStatus(null);
+        setUpgradingCode(null);
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError('No checkout URL returned. Please try again.');
+        setUpgradingCode(null);
+      }
+    } catch (err: any) {
+      setError(err.message ?? 'Unexpected error');
+      setUpgradingCode(null);
     }
-    setUpgrading(null);
   }
 
   const currentTierCode = subscription?.tierCode ?? 'FREE';
@@ -166,7 +201,7 @@ export default function PlansPage() {
           const price = billing === 'ANNUAL' ? plan.annualPriceLabel : plan.monthlyPriceLabel;
           const rawPrice = billing === 'ANNUAL' ? plan.priceAnnual : plan.priceMonthly;
           const current = isCurrent(plan.code);
-          const loading = upgrading === plan.code;
+          const loading = upgradingCode === plan.code;
 
           let effectiveDiscount = 0;
           if (billing === 'ANNUAL') effectiveDiscount = plan.annualDiscountPercent;
@@ -259,14 +294,14 @@ export default function PlansPage() {
                   className="w-full"
                   variant={current ? 'secondary' : 'primary'}
                   disabled={current || loading}
-                  onClick={() => upgrade(plan.code)}
+                  onClick={() => startCheckout(plan.code)}
                 >
                   {loading ? (
-                    <><Loader2 size={16} className="animate-spin" /> Upgrading...</>
+                    <><Loader2 size={16} className="animate-spin" /> Redirecting…</>
                   ) : current ? (
                     'Current plan'
                   ) : (
-                    `Upgrade to ${plan.name}`
+                    plan.code === 'FREE' ? `Switch to ${plan.name}` : `Upgrade to ${plan.name}`
                   )}
                 </Button>
               </div>

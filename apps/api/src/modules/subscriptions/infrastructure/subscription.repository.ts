@@ -14,11 +14,20 @@ export class SubscriptionRepository {
     });
   }
 
+  findById(id: string) {
+    return this.prisma.subscription.findUnique({
+      where: { id },
+      include: { tier: true },
+    });
+  }
+
   create(data: {
     userId: string;
     tierId: string;
     billingCycle: BillingCycle;
     currentPeriodEnd: Date;
+    stripeCustomerId?: string;
+    stripeSubscriptionId?: string;
   }) {
     return this.prisma.subscription.create({
       data: {
@@ -28,6 +37,8 @@ export class SubscriptionRepository {
         billingCycle: data.billingCycle,
         currentPeriodStart: new Date(),
         currentPeriodEnd: data.currentPeriodEnd,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
       },
       include: { tier: true },
     });
