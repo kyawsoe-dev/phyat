@@ -57,7 +57,6 @@ function formatCount(n: number): string {
 export default async function DashboardContent() {
   const user = await requireUser();
   const { data: links } = await getLinks();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const now = new Date();
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
@@ -184,12 +183,12 @@ export default async function DashboardContent() {
                 />
                 <div className="min-w-0 flex-1">
                   <a
-                    href={`${appUrl}/${link.slug}`}
+                    href={`${link.shortHost.startsWith('localhost') ? 'http://' : 'https://'}${link.shortHost}/${link.slug}`}
                     target="_blank"
                     rel="noreferrer"
                     className="truncate text-sm font-medium text-primary hover:underline"
                   >
-                    {appUrl}/{link.slug}
+                    {link.shortHost}/{link.slug}
                   </a>
                   <p className="truncate text-xs text-muted-foreground">
                     {link.title || link.destination}

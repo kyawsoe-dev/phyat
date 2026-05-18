@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Search, QrCode } from 'lucide-react';
+import { Plus, Search, QrCode, Pen, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { BulkUploadDialog } from '@/components/bulk-upload-dialog';
@@ -16,6 +16,7 @@ import { QRCardClient } from './qr-card-client';
 
 type LinkQR = {
   id: string;
+  shortHost: string;
   slug: string;
   title: string | null;
   destination: string;
@@ -25,19 +26,23 @@ type LinkQR = {
   expiresAt: string | null;
   passwordHash: string | null;
   qrCodeDataUrl: string | null;
+  notes?: string | null;
+  tags?: string[] | null;
+  utmParams?: { utm_source?: string; utm_medium?: string; utm_campaign?: string } | null;
+  redirectType?: string;
 };
 
 export function QRContent({
   links,
-  appUrl,
   createAction,
   updateAction,
+  editAction,
   bulkCreateAction,
 }: {
   links: LinkQR[];
-  appUrl: string;
   createAction?: (formData: FormData) => Promise<void>;
   updateAction?: (formData: FormData) => void | Promise<void>;
+  editAction?: (formData: FormData) => void | Promise<void>;
   bulkCreateAction?: (formData: FormData) => Promise<void>;
 }) {
   const [search, setSearch] = useState('');
@@ -47,6 +52,16 @@ export function QRContent({
   const [createOpen, setCreateOpen] = useState(false);
   const [createPending, setCreatePending] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [editingLink, setEditingLink] = useState<LinkQR | null>(null);
+  const [editPending, setEditPending] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    destination: '',
+    expiresAt: '',
+    password: '',
+    removePassword: false,
+  });
+  const [showEditAdvanced, setShowEditAdvanced] = useState(false);
 
   const filtered = links.filter((l) => {
     if (search) {
@@ -86,6 +101,33 @@ export function QRContent({
     }
   }
 
+  function startEdit(link: LinkQR) {
+    setEditingLink(link);
+    setEditForm({
+      title: link.title ?? '',
+      destination: link.destination,
+      expiresAt: link.expiresAt ? link.expiresAt.slice(0, 16) : '',
+      password: '',
+      removePassword: false,
+    });
+    setShowEditAdvanced(false);
+  }
+
+  async function handleEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editingLink || !editAction) return;
+    setEditPending(true);
+    const formData = new FormData(event.currentTarget);
+    formData.set('id', editingLink.id);
+    formData.set('active', 'true');
+    try {
+      await editAction(formData);
+      setEditingLink(null);
+    } finally {
+      setEditPending(false);
+    }
+  }
+
   function formatCount(n: number): string {
     if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
     if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -120,28 +162,20 @@ export function QRContent({
           </DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="title">Title</label>
+              <label className="text-sm font-medium" htmlFor="destination">Destination URL</label>
+              <Input id="destination" name="destination" placeholder="https://example.com" required type="url" autoFocus />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="title">Title (optional)</label>
               <Input id="title" name="title" placeholder="Campaign title" />
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="destination">Destination URL</label>
-              <Input id="destination" name="destination" placeholder="https://example.com" required type="url" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="customAlias">Custom back-half</label>
-              <Input id="customAlias" name="customAlias" placeholder="Custom back-half" pattern="[a-zA-Z0-9_-]{3,48}" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="expiresAt">Expiration</label>
-              <Input id="expiresAt" name="expiresAt" type="datetime-local" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-medium" htmlFor="password">Password (optional)</label>
-              <Input id="password" name="password" placeholder="Optional password" type="password" minLength={6} />
+              <label className="text-sm font-medium" htmlFor="customAlias">Custom back-half (optional)</label>
+              <Input id="customAlias" name="customAlias" placeholder="your-custom-slug" pattern="[a-zA-Z0-9_-]{3,48}" />
             </div>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="generateQR" defaultChecked className="rounded border-border" />
-              Generate QR code
+              <input type="checkbox" name="createLink" defaultChecked className="rounded border-border" />
+              Create short link
             </label>
             {createError && <p className="text-sm text-red-600">{createError}</p>}
             <DialogFooter>
@@ -151,6 +185,96 @@ export function QRContent({
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Dialog */}
+      {editingLink && (
+        <Dialog open={true} onOpenChange={() => setEditingLink(null)}>
+          <DialogContent className="sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>Edit QR Code</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="edit-destination">Destination URL</label>
+                <Input
+                  id="edit-destination"
+                  name="destination"
+                  placeholder="https://example.com"
+                  required
+                  type="url"
+                  value={editForm.destination}
+                  onChange={(e) => setEditForm((p) => ({ ...p, destination: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="edit-title">Title (optional)</label>
+                <Input
+                  id="edit-title"
+                  name="title"
+                  placeholder="Campaign title"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowEditAdvanced(!showEditAdvanced)}
+                className="flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+              >
+                {showEditAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                {showEditAdvanced ? 'Hide' : 'Show'} advanced options
+              </button>
+
+              {showEditAdvanced && (
+                <div className="space-y-4 rounded-lg border border-border p-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium" htmlFor="edit-expiresAt">Expiration</label>
+                    <Input
+                      id="edit-expiresAt"
+                      name="expiresAt"
+                      type="datetime-local"
+                      value={editForm.expiresAt}
+                      onChange={(e) => setEditForm((p) => ({ ...p, expiresAt: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium" htmlFor="edit-password">
+                      {editingLink.passwordHash ? 'Change password (leave blank to keep)' : 'Password (optional)'}
+                    </label>
+                    <Input
+                      id="edit-password"
+                      name="password"
+                      type="password"
+                      placeholder={editingLink.passwordHash ? 'New password' : 'Optional password lock'}
+                      minLength={6}
+                      value={editForm.password}
+                      onChange={(e) => setEditForm((p) => ({ ...p, password: e.target.value }))}
+                    />
+                  </div>
+                  {editingLink.passwordHash && (
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        name="removePassword"
+                        checked={editForm.removePassword}
+                        onChange={(e) => setEditForm((p) => ({ ...p, removePassword: e.target.checked }))}
+                        className="rounded border-border"
+                      />
+                      Remove password protection
+                    </label>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button type="button" variant="ghost" onClick={() => setEditingLink(null)}>Cancel</Button>
+                <Button type="submit" disabled={editPending}>{editPending ? 'Saving...' : 'Save changes'}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Search & Filters */}
       <div className="rounded-xl border border-border bg-background shadow-sm overflow-hidden">
@@ -222,7 +346,12 @@ export function QRContent({
           <div className="p-4">
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((link) => (
-                <QRCardClient key={link.slug} link={link} appUrl={appUrl} updateAction={updateAction} />
+                <QRCardClient
+                  key={link.slug}
+                  link={link}
+                  updateAction={updateAction}
+                  onEdit={startEdit}
+                />
               ))}
             </div>
           </div>

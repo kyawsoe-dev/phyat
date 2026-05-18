@@ -152,12 +152,10 @@ async function bulkCreateLinks(formData: FormData) {
 export default async function LinksContent() {
   await requireUser();
   const { data: links, nextCursor } = await getLinks();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   return (
     <LinkTable
       links={links}
-      appUrl={appUrl}
       updateAction={updateLink}
       deleteAction={deleteLink}
       editAction={editLink}

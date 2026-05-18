@@ -5,12 +5,13 @@ import {
   Copy,
   Edit,
   Power,
-  Trash2,
   BarChart3,
   Check,
   Download,
   Search,
   ChevronRight,
+  ChevronDown,
+  ChevronRight as ChevronRightIcon,
   ExternalLink,
 } from "lucide-react";
 import {
@@ -29,7 +30,7 @@ import { AnalyticsCharts } from "@/components/analytics-charts";
 
 export type LinkRow = {
   id: string;
-  shortHost?: string;
+  shortHost: string;
   slug: string;
   title?: string | null;
   notes?: string | null;
@@ -43,20 +44,21 @@ export type LinkRow = {
   createdAt: string;
   domainId?: string | null;
   domain?: { domain: string } | null;
+  utmParams?: { utm_source?: string; utm_medium?: string; utm_campaign?: string } | null;
+  redirectType?: string;
 };
 
 type LinkStats = {
   totalClicks: number;
   byCountry: Array<{ country: string; _count: { country: number } }>;
   byDevice: { mobile: number; desktop: number };
-  byReferrer: Array<{ referrer: string | null; _count: { referrer: number } }>;
+  byReferrer: Array<{ referrerDomain: string | null; _count: { referrerDomain: number } }>;
   overTime: Array<{ date: string; clicks: number }>;
   byCity: Array<{ city: string; country: string | null; _count: { city: number } }>;
 };
 
 export function LinkTable({
   links,
-  appUrl,
   updateAction,
   deleteAction,
   editAction,
@@ -65,7 +67,6 @@ export function LinkTable({
   nextCursor,
 }: {
   links: LinkRow[];
-  appUrl: string;
   updateAction: (formData: FormData) => void | Promise<void>;
   deleteAction?: (formData: FormData) => void | Promise<void>;
   editAction?: (formData: FormData) => void | Promise<void>;
@@ -87,8 +88,13 @@ export function LinkTable({
     password: "",
     notes: "",
     tags: "",
+    utmSource: "",
+    utmMedium: "",
+    utmCampaign: "",
+    redirectType: "TEMPORARY",
     removePassword: false,
   });
+  const [showEditAdvanced, setShowEditAdvanced] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "DISABLED">("ALL");
@@ -141,8 +147,8 @@ export function LinkTable({
     }
   }
 
-  function copyUrl(slug: string, domain?: { domain: string } | null) {
-    const base = domain ? `https://${domain.domain}` : appUrl;
+  function copyUrl(slug: string, shortHost: string, domain?: { domain: string } | null) {
+    const base = domain ? `https://${domain.domain}` : shortHost.startsWith('localhost') ? `http://${shortHost}` : `https://${shortHost}`;
     const url = `${base}/${slug}`;
     navigator.clipboard.writeText(url).catch(() => {});
     setCopiedId(slug);
@@ -158,8 +164,13 @@ export function LinkTable({
       destination: link.destination,
       expiresAt: link.expiresAt ? link.expiresAt.slice(0, 16) : "",
       password: "",
+      utmSource: link.utmParams?.utm_source ?? "",
+      utmMedium: link.utmParams?.utm_medium ?? "",
+      utmCampaign: link.utmParams?.utm_campaign ?? "",
+      redirectType: link.redirectType ?? "TEMPORARY",
       removePassword: false,
     });
+    setShowEditAdvanced(false);
   }
 
   function handleEditSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -172,8 +183,8 @@ export function LinkTable({
     setEditingLink(null);
   }
 
-  function linkUrl(slug: string, domain?: { domain: string } | null): string {
-    const base = domain ? `https://${domain.domain}` : appUrl;
+  function linkUrl(slug: string, shortHost: string, domain?: { domain: string } | null): string {
+    const base = domain ? `https://${domain.domain}` : shortHost.startsWith('localhost') ? `http://${shortHost}` : `https://${shortHost}`;
     return `${base}/${slug}`;
   }
 
@@ -312,12 +323,12 @@ export function LinkTable({
                           />
                           {/* Short URL */}
                           <a
-                            href={linkUrl(link.slug, (link as any).domain)}
+                            href={linkUrl(link.slug, link.shortHost, (link as any).domain)}
                             target="_blank"
                             rel="noreferrer"
                             className="truncate text-sm font-semibold text-primary hover:underline"
                           >
-                            {linkUrl(link.slug, (link as any).domain)}
+                            {linkUrl(link.slug, link.shortHost, (link as any).domain)}
                           </a>
                           <ExternalLink
                             size={12}
@@ -372,7 +383,7 @@ export function LinkTable({
                         <button
                           type="button"
                           title="Copy short URL"
-                          onClick={() => copyUrl(link.slug, (link as any).domain)}
+                          onClick={() => copyUrl(link.slug, link.shortHost, (link as any).domain)}
                           className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                           {copiedId === link.slug ? (
@@ -471,95 +482,193 @@ export function LinkTable({
       {/* Edit Dialog */}
       {editingLink && (
         <Dialog open={true} onOpenChange={() => setEditingLink(null)}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[640px]">
             <DialogHeader>
-              <DialogTitle>
-                Edit link — {linkUrl(editingLink.slug, (editingLink as any).domain)}
-              </DialogTitle>
+              <DialogTitle className="text-lg">Edit link</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Title</label>
-                <Input
-                  name="title"
-                  placeholder="Campaign title"
-                  value={editForm.title}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, title: e.target.value }))
-                  }
-                />
+            <form onSubmit={handleEditSubmit}>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className="mb-1 block text-sm font-medium" htmlFor="edit-destination">
+                      Destination URL
+                    </label>
+                    <Input
+                      id="edit-destination"
+                      name="destination"
+                      placeholder="https://example.com"
+                      type="url"
+                      required
+                      value={editForm.destination}
+                      onChange={(e) =>
+                        setEditForm((p) => ({ ...p, destination: e.target.value }))
+                      }
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium" htmlFor="edit-title">
+                      Title
+                    </label>
+                    <Input
+                      id="edit-title"
+                      name="title"
+                      placeholder="Campaign title"
+                      value={editForm.title}
+                      onChange={(e) =>
+                        setEditForm((p) => ({ ...p, title: e.target.value }))
+                      }
+                      className="h-9"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium" htmlFor="edit-expiresAt">
+                      Expiration
+                    </label>
+                    <Input
+                      id="edit-expiresAt"
+                      name="expiresAt"
+                      type="datetime-local"
+                      value={editForm.expiresAt}
+                      onChange={(e) =>
+                        setEditForm((p) => ({ ...p, expiresAt: e.target.value }))
+                      }
+                      className="h-9"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowEditAdvanced(!showEditAdvanced)}
+                  className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  {showEditAdvanced ? <ChevronDown size={13} /> : <ChevronRightIcon size={13} />}
+                  {showEditAdvanced ? "Hide" : "Show"} advanced options
+                </button>
+
+                {showEditAdvanced && (
+                  <div className="space-y-3 rounded-lg border border-border p-3 bg-muted/10">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-notes">Notes</label>
+                        <Input
+                          id="edit-notes"
+                          name="notes"
+                          placeholder="Internal note"
+                          value={editForm.notes}
+                          onChange={(e) =>
+                            setEditForm((p) => ({ ...p, notes: e.target.value }))
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-tags">Tags</label>
+                        <Input
+                          id="edit-tags"
+                          name="tags"
+                          placeholder="social, spring-sale"
+                          value={editForm.tags}
+                          onChange={(e) =>
+                            setEditForm((p) => ({ ...p, tags: e.target.value }))
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">UTM params</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input
+                          name="utmSource"
+                          placeholder="Source"
+                          value={editForm.utmSource}
+                          onChange={(e) => setEditForm((p) => ({ ...p, utmSource: e.target.value }))}
+                          className="h-9"
+                        />
+                        <Input
+                          name="utmMedium"
+                          placeholder="Medium"
+                          value={editForm.utmMedium}
+                          onChange={(e) => setEditForm((p) => ({ ...p, utmMedium: e.target.value }))}
+                          className="h-9"
+                        />
+                        <Input
+                          name="utmCampaign"
+                          placeholder="Campaign"
+                          value={editForm.utmCampaign}
+                          onChange={(e) => setEditForm((p) => ({ ...p, utmCampaign: e.target.value }))}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-redirectType">Redirect</label>
+                        <select
+                          id="edit-redirectType"
+                          name="redirectType"
+                          className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          value={editForm.redirectType}
+                          onChange={(e) => setEditForm((p) => ({ ...p, redirectType: e.target.value }))}
+                        >
+                          <option value="TEMPORARY">302 temporary</option>
+                          <option value="PERMANENT">301 permanent</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-password">
+                          {editingLink.passwordHash ? "Change password" : "Password"}
+                        </label>
+                        <Input
+                          id="edit-password"
+                          name="password"
+                          type="password"
+                          placeholder={editingLink.passwordHash ? "New password" : "Optional"}
+                          minLength={6}
+                          value={editForm.password}
+                          onChange={(e) =>
+                            setEditForm((p) => ({ ...p, password: e.target.value }))
+                          }
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+
+                    {editingLink.passwordHash && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          name="removePassword"
+                          checked={editForm.removePassword}
+                          onChange={(e) =>
+                            setEditForm((p) => ({
+                              ...p,
+                              removePassword: e.target.checked,
+                            }))
+                          }
+                          className="rounded border-border"
+                        />
+                        Remove password protection
+                      </label>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Destination URL</label>
-                <Input
-                  name="destination"
-                  placeholder="https://example.com"
-                  type="url"
-                  required
-                  value={editForm.destination}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, destination: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">Expiration</label>
-                <Input
-                  name="expiresAt"
-                  type="datetime-local"
-                  value={editForm.expiresAt}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, expiresAt: e.target.value }))
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium">
-                  {editingLink.passwordHash
-                    ? "Change password (leave blank to keep)"
-                    : "Password (optional)"}
-                </label>
-                <Input
-                  name="password"
-                  type="password"
-                  placeholder={
-                    editingLink.passwordHash
-                      ? "New password"
-                      : "Optional password lock"
-                  }
-                  minLength={6}
-                  value={editForm.password}
-                  onChange={(e) =>
-                    setEditForm((p) => ({ ...p, password: e.target.value }))
-                  }
-                />
-              </div>
-              {editingLink.passwordHash && (
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="removePassword"
-                    checked={editForm.removePassword}
-                    onChange={(e) =>
-                      setEditForm((p) => ({
-                        ...p,
-                        removePassword: e.target.checked,
-                      }))
-                    }
-                    className="rounded border-border"
-                  />
-                  Remove password protection
-                </label>
-              )}
-              <DialogFooter>
+
+              <DialogFooter className="mt-4">
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => setEditingLink(null)}
+                  className="h-9"
                 >
                   Cancel
                 </Button>
-                <Button type="submit">Save changes</Button>
+                <Button type="submit" className="h-9">Save changes</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -576,7 +685,7 @@ export function LinkTable({
             <p className="text-sm text-muted-foreground">
               This will permanently delete{" "}
               <strong>
-                {linkUrl(showDeleteConfirm.slug, (showDeleteConfirm as any).domain)}
+                {linkUrl(showDeleteConfirm.slug, showDeleteConfirm.shortHost, (showDeleteConfirm as any).domain)}
               </strong>
               . This action cannot be undone.
             </p>

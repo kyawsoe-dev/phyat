@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { ApiKeyGuard } from '../../api-keys/api-key.guard';
@@ -15,7 +15,6 @@ export class ShortenApiController {
   async shorten(
     @CurrentUser() user: AuthenticatedUser,
     @Body() input: CreateLinkDto,
-    @Headers('host') host: string | undefined,
   ) {
     const link = await this.links.create(user.id, input);
 

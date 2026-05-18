@@ -127,7 +127,6 @@ export default function PlansPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <CreditCard className="mx-auto text-primary" size={40} />
         <h1 className="mt-4 text-2xl font-bold tracking-tight">Choose your plan</h1>
         <p className="mt-2 text-muted-foreground">Upgrade to unlock unlimited links, custom domains, and developer features.</p>
       </div>

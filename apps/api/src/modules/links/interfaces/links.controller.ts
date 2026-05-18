@@ -89,22 +89,22 @@ export class LinksController {
   @Get('links/:slug/meta')
   @ApiOperation({ summary: 'Get link metadata for redirect page' })
   @ApiResponse({ status: 200, description: 'Returns link metadata' })
-  metadata(@Param('slug') slug: string, @Headers('host') host: string | undefined) {
-    return this.links.getGatewayMetadata(slug, host);
+  metadata(@Param('slug') slug: string, @Query('shortHost') shortHost: string | undefined) {
+    return this.links.getGatewayMetadata(slug, shortHost);
   }
 
   @Get('r/:slug')
   @ApiOperation({ summary: 'Redirect to the original URL (internal)' })
   async redirect(
     @Param('slug') slug: string,
+    @Query('shortHost') shortHost: string | undefined,
     @Headers('user-agent') userAgent: string | undefined,
     @Headers('referer') referrer: string | undefined,
     @Headers('x-forwarded-for') forwardedFor: string | undefined,
-    @Headers('host') host: string | undefined,
     @Ip() ip: string | undefined,
     @Res() response: Response,
   ) {
-    const result = await this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, undefined, host);
+    const result = await this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, undefined, shortHost);
     return response.redirect(result.statusCode, result.destination);
   }
 
@@ -113,13 +113,13 @@ export class LinksController {
   @ApiResponse({ status: 200, description: 'Returns redirect destination if password correct' })
   async passwordRedirect(
     @Param('slug') slug: string,
+    @Query('shortHost') shortHost: string | undefined,
     @Body() body: VerifyPasswordDto,
     @Headers('user-agent') userAgent: string | undefined,
     @Headers('referer') referrer: string | undefined,
     @Headers('x-forwarded-for') forwardedFor: string | undefined,
-    @Headers('host') host: string | undefined,
     @Ip() ip: string | undefined,
   ) {
-    return this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, body.password, host);
+    return this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, body.password, shortHost);
   }
 }

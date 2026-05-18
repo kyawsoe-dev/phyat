@@ -19,7 +19,7 @@ type LinkStats = {
   totalClicks: number;
   byCountry: Array<{ country: string; _count: { country: number } }>;
   byDevice: { mobile: number; desktop: number };
-  byReferrer: Array<{ referrer: string | null; _count: { referrer: number } }>;
+  byReferrer: Array<{ referrerDomain: string | null; _count: { referrerDomain: number } }>;
   overTime: Array<{ date: string; clicks: number }>;
   byCity: Array<{ city: string; country: string | null; _count: { city: number } }>;
 };

@@ -6,6 +6,7 @@ import { QRContent } from './qr-content';
 
 type LinkWithQR = {
   id: string;
+  shortHost: string;
   slug: string;
   title: string | null;
   destination: string;
@@ -40,7 +41,7 @@ async function createQR(formData: FormData) {
     customAlias: formData.get('customAlias') || undefined,
     expiresAt: formData.get('expiresAt') || undefined,
     password: formData.get('password') || undefined,
-    generateQR: formData.get('generateQR') !== 'off',
+    generateQR: formData.get('createLink') === 'on',
   };
 
   const response = await fetch(`${apiBaseUrl}/links`, {
@@ -70,6 +71,39 @@ async function updateQR(formData: FormData) {
 
   if (!response.ok) {
     throw new Error('Unable to update QR code.');
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/dashboard/qr');
+}
+
+async function editQR(formData: FormData) {
+  'use server';
+
+  const payload: Record<string, unknown> = {
+    title: formData.get('title') || undefined,
+    destination: formData.get('destination') || undefined,
+    expiresAt: formData.get('expiresAt') || undefined,
+    active: true,
+  };
+
+  const password = formData.get('password');
+  if (password && typeof password === 'string' && password.length >= 6) {
+    payload.password = password;
+  }
+
+  if (formData.get('removePassword') === 'on') {
+    payload.removePassword = true;
+  }
+
+  const response = await fetch(`${apiBaseUrl}/links/${formData.get('id')}`, {
+    method: 'PUT',
+    headers: { ...authHeaders(), 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error('Unable to edit QR code.');
   }
 
   revalidatePath('/dashboard');
@@ -106,14 +140,13 @@ export const metadata: Metadata = {
 export default async function QRPage() {
   await requireUser();
   const links = await getLinksWithQR();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
   return (
     <QRContent
       links={links}
-      appUrl={appUrl}
       createAction={createQR}
       updateAction={updateQR}
+      editAction={editQR}
       bulkCreateAction={bulkCreateQR}
     />
   );

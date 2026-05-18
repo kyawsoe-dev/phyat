@@ -33,7 +33,7 @@ type CampaignStats = {
   totalClicks: number;
   byCountry: Array<{ country: string; _count: { country: number } }>;
   byDevice: { mobile: number; desktop: number };
-  byReferrer: Array<{ referrer: string | null; _count: { referrer: number } }>;
+  byReferrer: Array<{ referrerDomain: string | null; _count: { referrerDomain: number } }>;
   overTime: Array<{ date: string; clicks: number }>;
   byCity: Array<{ city: string; country: string | null; _count: { city: number } }>;
 };
@@ -307,45 +307,6 @@ export default function CampaignsPage() {
     );
   }
 
-  function FormFields() {
-    const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((prev) => ({ ...prev, [key]: e.target.value }));
-
-    return (
-      <>
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Name</label>
-          <Input value={form.name} onChange={set('name')} placeholder="Summer campaign" required />
-        </div>
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Description</label>
-          <textarea
-            value={form.description}
-            onChange={set('description')}
-            className="w-full rounded-lg border border-border bg-background p-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-            rows={2}
-            placeholder="Optional description"
-          />
-        </div>
-        <LinkSelector />
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Click Goal</label>
-            <Input value={form.clickGoal} onChange={set('clickGoal')} placeholder="e.g. 10000" type="number" min="1" />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Start Date</label>
-            <Input value={form.startDate} onChange={set('startDate')} type="date" />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <label className="text-sm font-medium">End Date</label>
-          <Input value={form.endDate} onChange={set('endDate')} type="date" />
-        </div>
-      </>
-    );
-  }
-
   function toggleAnalytics(id: string) {
     if (selectedCampaign === id) {
       setSelectedCampaign(null);
@@ -545,7 +506,35 @@ export default function CampaignsPage() {
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader><DialogTitle>Create Campaign</DialogTitle></DialogHeader>
           <form onSubmit={handleCreate} className="space-y-4">
-            <FormFields />
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Name</label>
+              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Summer campaign" required />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                className="w-full rounded-lg border border-border bg-background p-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                rows={2}
+                placeholder="Optional description"
+              />
+            </div>
+            <LinkSelector />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Click Goal</label>
+                <Input value={form.clickGoal} onChange={(e) => setForm((p) => ({ ...p, clickGoal: e.target.value }))} placeholder="e.g. 10000" type="number" min="1" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Start Date</label>
+                <Input value={form.startDate} onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))} type="date" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">End Date</label>
+              <Input value={form.endDate} onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))} type="date" />
+            </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancel</Button>
               <Button type="submit">Create</Button>
@@ -559,7 +548,35 @@ export default function CampaignsPage() {
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader><DialogTitle>Edit Campaign</DialogTitle></DialogHeader>
           <form onSubmit={handleEdit} className="space-y-4">
-            <FormFields />
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Name</label>
+              <Input value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} placeholder="Summer campaign" required />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+                className="w-full rounded-lg border border-border bg-background p-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                rows={2}
+                placeholder="Optional description"
+              />
+            </div>
+            <LinkSelector />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Click Goal</label>
+                <Input value={form.clickGoal} onChange={(e) => setForm((p) => ({ ...p, clickGoal: e.target.value }))} placeholder="e.g. 10000" type="number" min="1" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium">Start Date</label>
+                <Input value={form.startDate} onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))} type="date" />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium">End Date</label>
+              <Input value={form.endDate} onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))} type="date" />
+            </div>
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setEditOpen(false)}>Cancel</Button>
               <Button type="submit">Save</Button>
