@@ -26,7 +26,7 @@ export function Logo({
         alt="Phyat"
         width={150}
         height={150}
-        className={cn("shrink-0 rounded-md object-contain", imageClassName)}
+        className={cn("shrink-0 rounded-md object-contain dark:invert", imageClassName)}
         priority
       />
       {showText && (
