@@ -29,8 +29,11 @@ import { AnalyticsCharts } from "@/components/analytics-charts";
 
 export type LinkRow = {
   id: string;
+  shortHost?: string;
   slug: string;
   title?: string | null;
+  notes?: string | null;
+  tags?: string[];
   destination: string;
   expiresAt?: string | null;
   passwordHash?: string | null;
@@ -82,6 +85,8 @@ export function LinkTable({
     destination: "",
     expiresAt: "",
     password: "",
+    notes: "",
+    tags: "",
     removePassword: false,
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -148,6 +153,8 @@ export function LinkTable({
     setEditingLink(link);
     setEditForm({
       title: link.title ?? "",
+      notes: link.notes ?? "",
+      tags: (link.tags ?? []).join(", "),
       destination: link.destination,
       expiresAt: link.expiresAt ? link.expiresAt.slice(0, 16) : "",
       password: "",
@@ -187,6 +194,9 @@ export function LinkTable({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a href="/api/links/export" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted">
+            <Download size={16} /> Export
+          </a>
           {bulkCreateAction && <BulkUploadDialog onCreate={bulkCreateAction} />}
           {createAction && <CreateLinkForm createLink={createAction} />}
         </div>
@@ -327,6 +337,13 @@ export function LinkTable({
                           ) : null}
                           {link.destination}
                         </p>
+                        {link.tags && link.tags.length > 0 && (
+                          <div className="pl-[18px] flex flex-wrap gap-1">
+                            {link.tags.slice(0, 4).map((tag) => (
+                              <span key={tag} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{tag}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       {/* Status Badge */}

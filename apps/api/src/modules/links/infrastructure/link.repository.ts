@@ -6,8 +6,11 @@ import { PrismaService } from '../../../common/prisma.service';
 export class LinkRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findBySlug(slug: string): Promise<Link | null> {
-    return this.prisma.link.findUnique({ where: { slug } });
+  findBySlug(slug: string, shortHost?: string): Promise<Link | null> {
+    if (shortHost) {
+      return this.prisma.link.findUnique({ where: { shortHost_slug: { shortHost, slug } } });
+    }
+    return this.prisma.link.findFirst({ where: { slug }, orderBy: { createdAt: 'asc' } });
   }
 
   create(data: Prisma.LinkCreateInput): Promise<Link> {
@@ -23,14 +26,23 @@ export class LinkRepository {
       skip: cursor ? 1 : 0,
       select: {
         id: true,
+        shortHost: true,
         slug: true,
         title: true,
+        notes: true,
+        tags: true,
         destination: true,
+        utmParams: true,
+        customParams: true,
+        redirectType: true,
+        archivedAt: true,
         expiresAt: true,
         passwordHash: true,
         status: true,
         clickCount: true,
         qrCodeDataUrl: true,
+        scanCount: true,
+        qrCodes: { where: { status: 'ACTIVE' }, take: 1, select: { id: true, imageDataUrl: true, imageFormat: true, scanCount: true } },
         createdAt: true,
         domainId: true,
         domain: { select: { domain: true } },
@@ -64,6 +76,10 @@ export class LinkRepository {
 
   countByUser(userId: string): Promise<number> {
     return this.prisma.link.count({ where: { userId } });
+  }
+
+  countForMonth(userId: string, monthStart: Date): Promise<number> {
+    return this.prisma.link.count({ where: { userId, createdAt: { gte: monthStart } } });
   }
 
   deleteOwned(id: string, userId: string): Promise<Link> {

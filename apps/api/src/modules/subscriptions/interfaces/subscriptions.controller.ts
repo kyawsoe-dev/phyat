@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { AdminGuard } from '../../../common/auth/admin.guard';
 import { SubscriptionsService } from '../application/subscriptions.service';
-import { UpgradeDto, RedeemCouponDto } from '../application/dto';
+import { AdminTierDto, ReorderTiersDto, TierStatusDto, UpgradeDto, RedeemCouponDto } from '../application/dto';
 
 @ApiTags('subscriptions')
 @Controller()
@@ -13,8 +14,8 @@ export class SubscriptionsController {
 
   @Get('plans')
   @ApiOperation({ summary: 'Get all plans with pricing' })
-  getPlans() {
-    return this.subs.getPlans();
+  getPlans(@Query('includeInactive') includeInactive?: string) {
+    return this.subs.getPlans(includeInactive === 'true');
   }
 
   @Get('subscriptions/current')
@@ -22,6 +23,13 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Get current active subscription' })
   getCurrent(@CurrentUser() user: AuthenticatedUser) {
     return this.subs.getCurrentSubscription(user.id);
+  }
+
+  @Get('usage/current')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get current usage against active tier limits' })
+  getUsage(@CurrentUser() user: AuthenticatedUser) {
+    return this.subs.getCurrentUsage(user.id);
   }
 
   @Post('subscriptions/upgrade')
@@ -43,5 +51,33 @@ export class SubscriptionsController {
   @ApiOperation({ summary: 'Validate and redeem a coupon code' })
   redeem(@CurrentUser() user: AuthenticatedUser, @Body() input: RedeemCouponDto) {
     return this.subs.redeemCoupon(user.id, input.code);
+  }
+
+  @Post('admin/tiers')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Create a dynamic tier' })
+  createTier(@Body() input: AdminTierDto) {
+    return this.subs.createTier(input);
+  }
+
+  @Put('admin/tiers/:id')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Update a dynamic tier' })
+  updateTier(@Param('id') id: string, @Body() input: AdminTierDto) {
+    return this.subs.updateTier(id, input);
+  }
+
+  @Patch('admin/tiers/:id/status')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Activate or deactivate a tier' })
+  updateTierStatus(@Param('id') id: string, @Body() input: TierStatusDto) {
+    return this.subs.setTierStatus(id, input.isActive);
+  }
+
+  @Put('admin/tiers/order')
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Update tier display order' })
+  reorderTiers(@Body() input: ReorderTiersDto) {
+    return this.subs.reorderTiers(input);
   }
 }

@@ -6,9 +6,11 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CampaignsModule } from './modules/campaigns/campaigns.module';
 import { DomainsModule } from './modules/domains/domains.module';
 import { LinksModule } from './modules/links/links.module';
+import { QrCodesModule } from './modules/qr-codes/qr-codes.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), AnalyticsModule, AuthModule, ApiKeyModule, CampaignsModule, DomainsModule, LinksModule, SubscriptionsModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), AnalyticsModule, AuthModule, ApiKeyModule, CampaignsModule, DomainsModule, LinksModule, QrCodesModule, SubscriptionsModule, WebhooksModule],
 })
 export class AppModule {}

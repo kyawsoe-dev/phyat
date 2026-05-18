@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Headers, Ip, Param, Post, Put, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
+import { UsageFeature } from '@prisma/client';
 import { CurrentUser } from '../../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -8,6 +9,8 @@ import { TierLimitGuard } from '../../subscriptions/tier-limit.guard';
 import { CreateLinkDto, UpdateLinkDto, VerifyPasswordDto } from '../application/dto';
 import { LinksService } from '../application/links.service';
 import { RedirectService } from '../application/redirect.service';
+import { TierCapabilityService } from '../../subscriptions/application/tier-capability.service';
+import { UsageService } from '../../subscriptions/application/usage.service';
 
 @ApiTags('links')
 @Controller()
@@ -15,6 +18,8 @@ export class LinksController {
   constructor(
     private readonly links: LinksService,
     private readonly redirects: RedirectService,
+    private readonly tiers: TierCapabilityService,
+    private readonly usage: UsageService,
   ) {}
 
   @UseGuards(JwtAuthGuard, TierLimitGuard)
@@ -30,6 +35,9 @@ export class LinksController {
   @ApiOperation({ summary: 'Bulk create short links' })
   @ApiResponse({ status: 201, description: 'Links created successfully' })
   async createBulk(@CurrentUser() user: AuthenticatedUser, @Body() inputs: CreateLinkDto[]) {
+    const tier = await this.tiers.getUserTier(user.id);
+    this.tiers.requireFeature(tier, 'bulkImport');
+    this.tiers.requireLimit(tier, 'bulkCreateLimit', 0, inputs.length);
     const results = [];
     const errors: { index: number; error: string }[] = [];
     for (let i = 0; i < inputs.length; i++) {
@@ -40,6 +48,7 @@ export class LinksController {
         errors.push({ index: i, error: (e as Error).message });
       }
     }
+    await this.usage.increment(user.id, tier.id, UsageFeature.BULK_ROWS, inputs.length);
     return { data: results, errors };
   }
 
@@ -49,6 +58,16 @@ export class LinksController {
   @ApiResponse({ status: 200, description: 'Returns paginated list of links' })
   list(@CurrentUser() user: AuthenticatedUser, @Query('cursor') cursor?: string) {
     return this.links.listDashboardLinks(user.id, cursor);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('links/export')
+  @ApiOperation({ summary: 'Export user links as CSV' })
+  async export(@CurrentUser() user: AuthenticatedUser, @Res() response: Response) {
+    const csv = await this.links.exportLinks(user.id);
+    response.setHeader('content-type', 'text/csv; charset=utf-8');
+    response.setHeader('content-disposition', 'attachment; filename="phyat-links.csv"');
+    return response.send(csv);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -70,8 +89,8 @@ export class LinksController {
   @Get('links/:slug/meta')
   @ApiOperation({ summary: 'Get link metadata for redirect page' })
   @ApiResponse({ status: 200, description: 'Returns link metadata' })
-  metadata(@Param('slug') slug: string) {
-    return this.links.getGatewayMetadata(slug);
+  metadata(@Param('slug') slug: string, @Headers('host') host: string | undefined) {
+    return this.links.getGatewayMetadata(slug, host);
   }
 
   @Get('r/:slug')
@@ -81,10 +100,11 @@ export class LinksController {
     @Headers('user-agent') userAgent: string | undefined,
     @Headers('referer') referrer: string | undefined,
     @Headers('x-forwarded-for') forwardedFor: string | undefined,
+    @Headers('host') host: string | undefined,
     @Ip() ip: string | undefined,
     @Res() response: Response,
   ) {
-    const result = await this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip });
+    const result = await this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, undefined, host);
     return response.redirect(result.statusCode, result.destination);
   }
 
@@ -97,8 +117,9 @@ export class LinksController {
     @Headers('user-agent') userAgent: string | undefined,
     @Headers('referer') referrer: string | undefined,
     @Headers('x-forwarded-for') forwardedFor: string | undefined,
+    @Headers('host') host: string | undefined,
     @Ip() ip: string | undefined,
   ) {
-    return this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, body.password);
+    return this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, body.password, host);
   }
 }

@@ -3,8 +3,13 @@ import { PrismaService } from '../../../common/prisma.service';
 
 type AnalyticsInput = {
   linkId: string;
+  eventType?: 'CLICK' | 'SCAN';
   userAgent?: string;
+  browser?: string;
+  os?: string;
+  device?: string;
   referrer?: string;
+  referrerDomain?: string;
   ip?: string;
   country?: string;
   region?: string;
@@ -24,8 +29,13 @@ export class AnalyticsRepository {
       where: { id },
       select: {
         id: true,
+        eventType: true,
         userAgent: true,
+        browser: true,
+        os: true,
+        device: true,
         referrer: true,
+        referrerDomain: true,
         ip: true,
         country: true,
         region: true,
@@ -55,8 +65,13 @@ export class AnalyticsRepository {
         take,
         select: {
           id: true,
+          eventType: true,
           userAgent: true,
+          browser: true,
+          os: true,
+          device: true,
           referrer: true,
+          referrerDomain: true,
           ip: true,
           country: true,
           region: true,
@@ -84,17 +99,17 @@ export class AnalyticsRepository {
         take: 10,
       }),
       this.prisma.analytics.groupBy({
-        by: ['userAgent'],
-        where: { linkId, userAgent: { not: null } },
-        _count: { userAgent: true },
-        orderBy: { _count: { userAgent: 'desc' } },
+        by: ['device'],
+        where: { linkId, device: { not: null } },
+        _count: { device: true },
+        orderBy: { _count: { device: 'desc' } },
         take: 5,
       }),
       this.prisma.analytics.groupBy({
-        by: ['referrer'],
+        by: ['referrerDomain'],
         where: { linkId },
-        _count: { referrer: true },
-        orderBy: { _count: { referrer: 'desc' } },
+        _count: { referrerDomain: true },
+        orderBy: { _count: { referrerDomain: 'desc' } },
         take: 10,
       }),
       this.prisma.$queryRawUnsafe<Array<{ date: string; clicks: bigint }>>(
@@ -114,11 +129,11 @@ export class AnalyticsRepository {
       }),
     ]);
 
-    type DeviceCountResult = { userAgent: string | null; _count: { userAgent: number } };
+    type DeviceCountResult = { device: string | null; _count: { device: number } };
     const deviceResults = byDevice as DeviceCountResult[];
     const mobileCount = deviceResults.reduce((sum, d) => {
-      const count = d._count?.userAgent ?? 0;
-      return /mobile|android|iphone/i.test(d.userAgent ?? '') ? sum + count : sum;
+      const count = d._count?.device ?? 0;
+      return d.device === 'mobile' ? sum + count : sum;
     }, 0);
     const desktopCount = totalClicks - mobileCount;
 

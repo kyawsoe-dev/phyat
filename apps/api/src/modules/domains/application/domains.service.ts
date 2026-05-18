@@ -1,6 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { UsageFeature } from '@prisma/client';
 import { CreateDomainDto, UpdateDomainDto } from './dto';
 import { DomainRepository } from '../infrastructure/domain.repository';
+import { PrismaService } from '../../../common/prisma.service';
+import { TierCapabilityService } from '../../subscriptions/application/tier-capability.service';
+import { UsageService } from '../../subscriptions/application/usage.service';
 import * as dns from 'dns';
 import { promisify } from 'util';
 
@@ -10,9 +14,18 @@ const resolveTxt = promisify(dns.resolveTxt);
 export class DomainsService {
   private readonly VERIFICATION_PREFIX = 'phyat-verify=';
 
-  constructor(private readonly domains: DomainRepository) {}
+  constructor(
+    private readonly domains: DomainRepository,
+    private readonly prisma: PrismaService,
+    private readonly tiers: TierCapabilityService,
+    private readonly usage: UsageService,
+  ) {}
 
   async create(userId: string, input: CreateDomainDto) {
+    const tier = await this.tiers.getUserTier(userId);
+    this.tiers.requireFeature(tier, 'customDomains');
+    const count = await this.prisma.domain.count({ where: { userId } });
+    this.tiers.requireLimit(tier, 'maxCustomDomains', count);
     const existing = await this.domains.findByDomain(input.domain);
     if (existing) {
       if (existing.userId === userId) {
@@ -20,7 +33,9 @@ export class DomainsService {
       }
       throw new ConflictException('Domain is already in use.');
     }
-    return this.domains.create(userId, input);
+    const domain = await this.domains.create(userId, input);
+    await this.usage.increment(userId, tier.id, UsageFeature.CUSTOM_DOMAINS);
+    return domain;
   }
 
   list(userId: string) {

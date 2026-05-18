@@ -2,10 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 
 type CacheEntry = {
   id: string;
+  userId?: string;
   destination: string;
   passwordHash: string | null;
   status: string;
   expiresAt: Date | null;
+  archivedAt?: Date | null;
+  redirectType?: string;
 };
 
 type StoredEntry = {

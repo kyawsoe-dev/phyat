@@ -6,6 +6,9 @@ import { AnalyticsRepository } from '../analytics/infrastructure/analytics.repos
 import { AuthModule } from '../auth/auth.module';
 import { DomainsModule } from '../domains/domains.module';
 import { TierLimitGuard } from '../subscriptions/tier-limit.guard';
+import { TierCapabilityService } from '../subscriptions/application/tier-capability.service';
+import { UsageService } from '../subscriptions/application/usage.service';
+import { WebhooksService } from '../webhooks/application/webhooks.service';
 import { LinksService } from './application/links.service';
 import { RedirectService } from './application/redirect.service';
 import { SlugService } from './application/slug.service';
@@ -27,6 +30,9 @@ import { ShortenApiController } from './interfaces/shorten-api.controller';
     RedirectService,
     SlugService,
     TierLimitGuard,
+    TierCapabilityService,
+    UsageService,
+    WebhooksService,
   ],
 })
 export class LinksModule {}

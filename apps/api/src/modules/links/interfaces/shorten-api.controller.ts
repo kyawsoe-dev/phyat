@@ -22,7 +22,7 @@ export class ShortenApiController {
     return {
       id: link.id,
       slug: link.slug,
-      shortUrl: `${process.env.PUBLIC_SHORT_URL ?? `https://${host}`}/${link.slug}`,
+      shortUrl: `https://${link.shortHost}/${link.slug}`,
       destination: link.destination,
       expiresAt: link.expiresAt,
       createdAt: link.createdAt,

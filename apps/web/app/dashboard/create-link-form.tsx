@@ -75,6 +75,16 @@ export function CreateLinkForm({
             </div>
 
             <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="notes">Notes</label>
+              <Input id="notes" name="notes" placeholder="Internal note" />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium" htmlFor="tags">Tags</label>
+              <Input id="tags" name="tags" placeholder="social, spring-sale" />
+            </div>
+
+            <div className="space-y-1">
               <label className="text-sm font-medium" htmlFor="destination">
                 Destination URL
               </label>
@@ -97,6 +107,28 @@ export function CreateLinkForm({
                 placeholder="Custom back-half"
                 pattern="[a-zA-Z0-9_-]{3,48}"
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="utmSource">UTM source</label>
+                <Input id="utmSource" name="utmSource" placeholder="newsletter" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="utmMedium">UTM medium</label>
+                <Input id="utmMedium" name="utmMedium" placeholder="email" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="utmCampaign">UTM campaign</label>
+                <Input id="utmCampaign" name="utmCampaign" placeholder="launch" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium" htmlFor="redirectType">Redirect</label>
+                <select id="redirectType" name="redirectType" className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20">
+                  <option value="TEMPORARY">302 temporary</option>
+                  <option value="PERMANENT">301 permanent</option>
+                </select>
+              </div>
             </div>
 
             <div className="space-y-1">

@@ -1,12 +1,11 @@
 import { Request } from 'express';
+import type { TierCapabilities } from '../../modules/subscriptions/application/tier-capability.service';
 
 export type AuthenticatedUser = {
   id: string;
   email: string;
-  tier: {
-    code: 'FREE' | 'PRO' | 'DEVELOPER';
-    maxLinks: number | null;
-  };
+  isAdmin: boolean;
+  tier: TierCapabilities;
 };
 
 export type AuthenticatedRequest = Request & {

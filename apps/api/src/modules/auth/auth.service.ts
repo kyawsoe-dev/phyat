@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { TierCode } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../common/prisma.service';
+import { TIER_SELECT, TierCapabilities } from '../subscriptions/application/tier-capability.service';
 import { ChangePasswordDto, LoginDto, RegisterDto, UpdateProfileDto } from './dto';
 
 @Injectable()
@@ -26,7 +27,7 @@ export class AuthService {
         passwordHash: await bcrypt.hash(input.password, 12),
         tierId: freeTier.id,
       },
-      include: { tier: true },
+      select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     return this.session(user);
@@ -35,7 +36,7 @@ export class AuthService {
   async login(input: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
-      include: { tier: true },
+      select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
@@ -48,7 +49,7 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      include: { tier: true },
+      select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     return {
@@ -56,11 +57,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       createdAt: user.createdAt,
-      tier: {
-        code: user.tier.code,
-        name: user.tier.name,
-        maxLinks: user.tier.maxLinks,
-      },
+      tier: user.tier,
     };
   }
 
@@ -89,7 +86,7 @@ export class AuthService {
     return { success: true };
   }
 
-  private async session(user: { id: string; email: string; name: string | null; tier: { code: TierCode; name: string; maxLinks: number | null } }) {
+  private async session(user: { id: string; email: string; name: string | null; tier: TierCapabilities }) {
     const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email });
 
     return {
@@ -98,11 +95,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        tier: {
-          code: user.tier.code,
-          name: user.tier.name,
-          maxLinks: user.tier.maxLinks,
-        },
+        tier: user.tier,
       },
     };
   }

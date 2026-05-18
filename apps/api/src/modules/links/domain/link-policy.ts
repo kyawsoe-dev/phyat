@@ -4,8 +4,8 @@ export function isExpired(link: Pick<Link, 'expiresAt'>, now = new Date()): bool
   return Boolean(link.expiresAt && link.expiresAt <= now);
 }
 
-export function isRedirectable(link: Pick<Link, 'expiresAt' | 'status'>, now = new Date()): boolean {
-  return link.status === LinkStatus.ACTIVE && !isExpired(link, now);
+export function isRedirectable(link: Pick<Link, 'expiresAt' | 'status' | 'archivedAt'>, now = new Date()): boolean {
+  return link.status === LinkStatus.ACTIVE && !link.archivedAt && !isExpired(link, now);
 }
 
 export function normalizeSlug(slug: string): string {

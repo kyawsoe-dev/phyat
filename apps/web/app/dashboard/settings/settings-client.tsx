@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   User, KeyRound, Bell, Shield, Code2, Eye, EyeOff,
   Copy, Check, Trash2, Plus, ExternalLink, Save, Pencil,
@@ -34,6 +34,8 @@ type Stats = {
   domainCount: number;
 };
 
+type UsageInfo = { usage: Record<string, number>; limits: Record<string, number | null>; month: string } | null;
+
 type Tab = 'profile' | 'developer' | 'notifications' | 'security';
 
 export function SettingsClient({
@@ -46,6 +48,11 @@ export function SettingsClient({
   initialApiKeys: ApiKey[];
 }) {
   const [tab, setTab] = useState<Tab>('profile');
+  const [usage, setUsage] = useState<UsageInfo>(null);
+
+  useEffect(() => {
+    fetch('/api/usage/current').then((r) => (r.ok ? r.json() : null)).then(setUsage).catch(() => setUsage(null));
+  }, []);
 
   const tabs: { id: Tab; label: string; icon: typeof User }[] = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -80,7 +87,7 @@ export function SettingsClient({
         ))}
       </div>
 
-      {tab === 'profile' && <ProfileSection user={user} stats={stats} />}
+      {tab === 'profile' && <ProfileSection user={user} stats={stats} usage={usage} />}
       {tab === 'developer' && <DeveloperApiSection initialKeys={initialApiKeys} />}
       {tab === 'notifications' && <NotificationsSection />}
       {tab === 'security' && <SecuritySection user={user} />}
@@ -88,7 +95,7 @@ export function SettingsClient({
   );
 }
 
-function ProfileSection({ user, stats }: { user: UserData; stats: Stats }) {
+function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; usage: UsageInfo }) {
   const [name, setName] = useState(user.name ?? '');
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -212,6 +219,32 @@ function ProfileSection({ user, stats }: { user: UserData; stats: Stats }) {
           )}
         </div>
       </div>
+
+      {usage && (
+        <div className="rounded-xl border border-border bg-background shadow-sm">
+          <div className="p-6">
+            <h3 className="text-sm font-semibold">Monthly Usage</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {(['LINKS', 'QR_CODES', 'CUSTOM_DOMAINS', 'API_KEYS'] as const).map((key) => {
+                const value = usage.usage[key] ?? 0;
+                const limit = usage.limits[key];
+                const pct = limit ? Math.min(100, Math.round((value / limit) * 100)) : 0;
+                return (
+                  <div key={key} className="rounded-lg border border-border p-4">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{key.replace('_', ' ')}</span>
+                      <span>{limit == null ? `${value} / Unlimited` : `${value} / ${limit}`}</span>
+                    </div>
+                    <div className="mt-3 h-2 rounded-full bg-muted">
+                      <div className="h-2 rounded-full bg-primary" style={{ width: limit == null ? '100%' : `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Account Stats */}
       <div className="rounded-xl border border-border bg-background shadow-sm">
@@ -453,7 +486,7 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
             </code>
             <p className="mt-2">Example:</p>
             <code className="block rounded border border-border bg-background px-3 py-2 font-mono">
-              curl -H "Authorization: Bearer phyat_live_your_key_here" \<br />
+              curl -H &quot;Authorization: Bearer phyat_live_your_key_here&quot; \<br />
               &nbsp;&nbsp;{typeof window !== 'undefined' ? window.location.origin : ''}/api/links
             </code>
           </div>

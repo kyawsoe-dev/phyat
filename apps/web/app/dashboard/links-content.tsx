@@ -25,12 +25,20 @@ async function createLink(formData: FormData) {
   const payload = {
     destination: formData.get("destination"),
     title: formData.get("title") || undefined,
+    notes: formData.get("notes") || undefined,
+    tags: String(formData.get("tags") || "").split(",").map((s) => s.trim()).filter(Boolean),
     customAlias: formData.get("customAlias") || undefined,
     expiresAt: formData.get("expiresAt") || undefined,
     password: formData.get("password") || undefined,
     generateQR: formData.get("generateQR") === "on",
     campaignId: formData.get("campaignId") || undefined,
     domainId: formData.get("domainId") || undefined,
+    redirectType: formData.get("redirectType") || undefined,
+    utmParams: {
+      utm_source: formData.get("utmSource") || undefined,
+      utm_medium: formData.get("utmMedium") || undefined,
+      utm_campaign: formData.get("utmCampaign") || undefined,
+    },
   };
 
   const response = await fetch(`${apiBaseUrl}/links`, {
@@ -72,6 +80,8 @@ async function editLink(formData: FormData) {
 
   const payload: Record<string, unknown> = {
     title: formData.get("title") || undefined,
+    notes: formData.get("notes") || undefined,
+    tags: String(formData.get("tags") || "").split(",").map((s) => s.trim()).filter(Boolean),
     destination: formData.get("destination") || undefined,
     expiresAt: formData.get("expiresAt") || undefined,
     active: true,

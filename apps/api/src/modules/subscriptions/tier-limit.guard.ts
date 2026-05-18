@@ -14,7 +14,9 @@ export class TierLimitGuard implements CanActivate {
       return false;
     }
 
-    if (user.tier.maxLinks === null) {
+    const maxLinks = user.tier.maxLinksPerMonth ?? user.tier.maxLinks;
+
+    if (maxLinks === null || maxLinks === undefined) {
       return true;
     }
 
@@ -29,7 +31,7 @@ export class TierLimitGuard implements CanActivate {
       },
     });
 
-    if (linkCount >= user.tier.maxLinks) {
+    if (linkCount >= maxLinks) {
       throw new ForbiddenException('ကျေးဇူးပြု၍ သင်၏အစီအစဉ်ကို Upgrade လုပ်ပါ (Please upgrade your plan).');
     }
 
