@@ -1,10 +1,12 @@
 'use client';
 
-import { Sparkles, Link2, LockKeyhole, Clock3, QrCode, Menu, X, AlertCircle, ChevronDown, Settings, CreditCard, LogOut, LayoutDashboard } from 'lucide-react';
+import { Sparkles, Link2, LockKeyhole, Clock3, QrCode, Menu, X, AlertCircle, ChevronDown, Settings, CreditCard, LogOut, LayoutDashboard, Copy, Check, ExternalLink } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
 import { cn } from '@/lib/utils';
@@ -32,6 +34,9 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
   const [activeSection, setActiveSection] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [pending, setPending] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [createdLink, setCreatedLink] = useState<null | { id: string; slug: string; shortUrl: string; destination: string; title: string | null; qrCodeDataUrl: string | null }>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
@@ -40,15 +45,35 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
     setSuccess('');
     const form = e.currentTarget;
     const data = new FormData(form);
-    const result = await createLink(data);
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setSuccess('Link created! Redirecting...');
-      form.reset();
-      setTimeout(() => setSuccess(''), 3000);
+    setPending(true);
+    setCopied(false);
+    try {
+      const result = await createLink(data);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.link) {
+        setCreatedLink(result.link);
+        setSuccess('Link created successfully.');
+        form.reset();
+        setTimeout(() => setSuccess(''), 2500);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to create link.');
+    } finally {
+      setPending(false);
     }
   }, []);
+
+  const copyCreatedLink = useCallback(async () => {
+    if (!createdLink) return;
+    try {
+      await navigator.clipboard.writeText(createdLink.shortUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setError('Unable to copy link.');
+    }
+  }, [createdLink]);
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
@@ -248,6 +273,44 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
         </div>
       )}
 
+      <Dialog open={Boolean(createdLink)} onOpenChange={(next) => { if (!next) setCreatedLink(null); }}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Your short link is ready</DialogTitle>
+          </DialogHeader>
+          {createdLink && (
+            <div className="space-y-4">
+              <div className="rounded-md border border-border bg-muted/40 p-4">
+                <p className="text-xs font-medium uppercase text-muted-foreground">Short URL</p>
+                <a href={createdLink.shortUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-lg font-semibold text-primary hover:underline">
+                  {createdLink.shortUrl}
+                </a>
+                <p className="mt-2 break-all text-xs text-muted-foreground">{createdLink.destination}</p>
+              </div>
+              {createdLink.qrCodeDataUrl && (
+                <div className="flex items-center gap-4 rounded-md border border-border p-4">
+                  <Image src={createdLink.qrCodeDataUrl} alt="Generated QR code" width={96} height={96} unoptimized className="rounded border border-border bg-white p-1" />
+                  <div>
+                    <p className="text-sm font-medium">QR code generated</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Manage and download it from your dashboard later.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button type="button" variant="secondary" onClick={copyCreatedLink}>
+              {copied ? <Check size={16} /> : <Copy size={16} />} {copied ? 'Copied' : 'Copy link'}
+            </Button>
+            {createdLink && (
+              <Button asChild>
+                <a href={createdLink.shortUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Open</a>
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="relative overflow-hidden border-b border-border bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.16),transparent_32%),linear-gradient(180deg,hsl(var(--card)),transparent)]">
         <div className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(hsl(166_74%_70%)_1px,transparent_1px)] [background-size:42px_42px]" />
         <section className="mx-auto max-w-6xl px-6 pt-24 pb-16">
@@ -283,8 +346,8 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
                   required={!!user}
                 />
                 {user ? (
-                  <Button type="submit" className="h-10 px-8">
-                    <Sparkles size={16} /> Shorten URL
+                  <Button type="submit" className="h-10 px-8" disabled={pending}>
+                    <Sparkles size={16} /> {pending ? 'Shortening...' : 'Shorten URL'}
                   </Button>
                 ) : (
                   <Button asChild className="h-10 px-8">

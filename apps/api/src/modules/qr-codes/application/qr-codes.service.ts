@@ -36,7 +36,7 @@ export class QrCodesService {
     if (input.design && Object.keys(input.design).length > 0) this.tiers.requireFeature(tier, 'qrCustomization');
     const link = await this.prisma.link.findFirst({ where: { id: input.linkId, userId } });
     if (!link) throw new NotFoundException('Link not found.');
-    const shortUrl = `https://${link.shortHost}/${link.slug}`;
+    const shortUrl = this.shortUrlForHost(link.shortHost, link.slug);
     const imageDataUrl = await QRCode.toDataURL(shortUrl, { margin: 1, width: 512 });
     const qr = await this.prisma.qrCode.create({
       data: { userId, linkId: link.id, title: input.title ?? link.title, design: input.design as Prisma.InputJsonValue, imageDataUrl, imageFormat: 'png' },
@@ -77,6 +77,11 @@ export class QrCodesService {
     this.analytics.trackClick(qr.linkId, context, 'SCAN');
     void this.webhooks.publish(qr.userId, 'QR_SCANNED', { id: qr.id, linkId: qr.linkId });
     return response.redirect(qr.link.redirectType === 'PERMANENT' ? 301 : 302, qr.link.destination);
+  }
+
+  private shortUrlForHost(shortHost: string, slug: string) {
+    const protocol = shortHost.startsWith('localhost') || shortHost.startsWith('127.0.0.1') ? 'http' : 'https';
+    return `${protocol}://${shortHost}/${slug}`;
   }
 
   private sendDataUrl(dataUrl: string, filename: string, response: Response) {

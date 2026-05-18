@@ -6,6 +6,11 @@ import { apiBaseUrl } from '@/lib/utils';
 
 const cookieName = 'phyat_token';
 
+function shortUrlForHost(shortHost: string, slug: string) {
+  const protocol = shortHost.startsWith('localhost') || shortHost.startsWith('127.0.0.1') ? 'http' : 'https';
+  return `${protocol}://${shortHost}/${slug}`;
+}
+
 export async function createLink(formData: FormData) {
   const token = cookies().get(cookieName)?.value;
   if (!token) throw new Error('You must be signed in to create links.');
@@ -15,12 +20,13 @@ export async function createLink(formData: FormData) {
     throw new Error('A valid destination URL is required.');
   }
 
-  const payload: Record<string, string | undefined> = {
+  const payload: Record<string, string | boolean | undefined> = {
     destination: destination.trim(),
     title: (formData.get('title') as string) || undefined,
     customAlias: (formData.get('customAlias') as string) || undefined,
     expiresAt: (formData.get('expiresAt') as string) || undefined,
     password: (formData.get('password') as string) || undefined,
+    generateQR: true,
   };
 
   const response = await fetch(`${apiBaseUrl}/links`, {
@@ -45,7 +51,19 @@ export async function createLink(formData: FormData) {
     return { error: message };
   }
 
+  const link = await response.json();
   revalidatePath('/');
   revalidatePath('/dashboard');
-  return { success: true };
+  return {
+    success: true,
+    link: {
+      id: link.id,
+      slug: link.slug,
+      shortHost: link.shortHost,
+      shortUrl: shortUrlForHost(link.shortHost, link.slug),
+      destination: link.destination,
+      title: link.title ?? null,
+      qrCodeDataUrl: link.qrCodeDataUrl ?? null,
+    },
+  };
 }

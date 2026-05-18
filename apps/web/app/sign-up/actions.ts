@@ -9,6 +9,8 @@ export async function signUp(prev: { error: string } | undefined, formData: Form
   const email = formData.get("email");
   const password = formData.get("password");
   const confirmPassword = formData.get("confirmPassword");
+  const tier = String(formData.get("tier") || "");
+  const billing = String(formData.get("billing") || "MONTHLY");
 
   if (password !== confirmPassword) {
     return { error: "Passwords do not match." };
@@ -33,5 +35,9 @@ export async function signUp(prev: { error: string } | undefined, formData: Form
 
   const session = (await response.json()) as { accessToken: string };
   setToken(session.accessToken);
+  if (tier === "PRO" || tier === "DEVELOPER") {
+    redirect(`/dashboard/plans?tier=${tier}&billing=${billing === "ANNUAL" ? "ANNUAL" : "MONTHLY"}`);
+  }
+
   redirect("/dashboard");
 }

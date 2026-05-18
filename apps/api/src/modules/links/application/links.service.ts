@@ -63,7 +63,7 @@ export class LinksService {
     const existing = await this.links.findBySlug(slug, host);
     if (existing) throw new ConflictException('That back-half is already taken on this domain.');
 
-    const shortUrl = `https://${host}/${slug}`;
+    const shortUrl = this.shortUrlForHost(host, slug);
     const passwordHash = input.password ? await bcrypt.hash(input.password, 12) : undefined;
     const destination = this.composeDestination(input.destination, input.utmParams, input.customParams);
     let qrCodeDataUrl: string | undefined;
@@ -186,7 +186,7 @@ export class LinksService {
     const header = ['id', 'shortUrl', 'destination', 'title', 'tags', 'status', 'clickCount', 'scanCount', 'createdAt'];
     const rows = links.map((l) => [
       l.id,
-      `https://${l.shortHost}/${l.slug}`,
+      this.shortUrlForHost(l.shortHost, l.slug),
       l.destination,
       l.title ?? '',
       l.tags.join('|'),
@@ -196,6 +196,11 @@ export class LinksService {
       l.createdAt.toISOString(),
     ]);
     return [header, ...rows].map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
+  }
+
+  shortUrlForHost(shortHost: string, slug: string) {
+    const protocol = shortHost.startsWith('localhost') || shortHost.startsWith('127.0.0.1') ? 'http' : 'https';
+    return `${protocol}://${shortHost}/${slug}`;
   }
 
   private async resolveShortHost(userId: string, domainId: string | undefined, tier: { customDomains: boolean }) {

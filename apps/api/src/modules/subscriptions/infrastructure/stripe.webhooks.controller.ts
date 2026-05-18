@@ -1,52 +1,41 @@
-import { Body, Controller, Headers, HttpCode, HttpStatus, Post, Logger } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
-import * as StripePackage from 'stripe';
+import { Controller, Headers, HttpCode, HttpStatus, Logger, Post, Req } from '@nestjs/common';
+import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { RawBodyRequest } from '@nestjs/common';
+import { Request } from 'express';
 import { SubscriptionsService } from '../application/subscriptions.service';
 import { PrismaService } from '../../../common/prisma.service';
-import { ConfigService } from '@nestjs/config';
+import { StripeService } from './stripe.service';
 
 @ApiTags('stripe')
 @Controller()
 export class StripeWebhooksController {
-  private readonly stripe: any;
-  private readonly webhookSecret: string;
   private readonly logger = new Logger(StripeWebhooksController.name);
 
   constructor(
     private readonly subsService: SubscriptionsService,
     private readonly prisma: PrismaService,
-    config: ConfigService,
-  ) {
-    const secretKey = config.get<string>('STRIPE_SECRET_KEY')!;
-    const Stripe = (StripePackage as any).default ?? (StripePackage as any);
-    this.stripe = new Stripe(secretKey, { apiVersion: '2026-04-22.dahlia' });
-    this.webhookSecret = config.get<string>('STRIPE_WEBHOOK_SECRET')!;
-  }
+    private readonly stripe: StripeService,
+  ) {}
 
   @Post('stripe/webhook')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Stripe webhook endpoint – handles checkout.completed and invoice.paid events' })
+  @ApiOperation({ summary: 'Stripe webhook endpoint for Checkout and subscription events' })
   @ApiHeader({ name: 'Stripe-Signature', description: 'Stripe webhook signature for verification', required: true })
   async handleWebhook(
     @Headers('stripe-signature') signature: string | undefined,
-    @Body() body: any,
+    @Req() request: RawBodyRequest<Request>,
   ): Promise<{ received: boolean }> {
-    if (!signature) {
-      this.logger.warn('Webhook received without Stripe-Signature header – skipping');
+    if (!signature || !request.rawBody) {
+      this.logger.warn('Stripe webhook received without signature or raw body.');
       return { received: false };
     }
 
     let event: any;
-
     try {
-      event = this.stripe.webhooks.constructEvent(
-        JSON.stringify(body),
-        signature,
-        this.webhookSecret,
-      ) as unknown as any;
-      this.logger.log(`Stripe webhook received: ${event.type} – id=${event.id}`);
-    } catch (err: any) {
-      this.logger.error(`Webhook signature verification failed: ${err.message}`);
+      event = this.stripe.constructWebhookEvent(request.rawBody, signature);
+      this.logger.log(`Stripe webhook received: ${event.type} id=${event.id}`);
+    } catch (error) {
+      this.logger.error(`Stripe webhook signature verification failed: ${String(error)}`);
       return { received: false };
     }
 
@@ -55,60 +44,41 @@ export class StripeWebhooksController {
         case 'checkout.session.completed':
           await this.subsService.syncSubscriptionFromSession(event.data.object.id);
           break;
-
-        case 'invoice.paid':
-          await this.handleInvoicePaid(event.data.object as any);
-          break;
-
-        case 'invoice.payment_failed':
-          this.logger.warn(`Payment failed for invoice ${event.data.object.id}`);
-          break;
-
         case 'customer.subscription.deleted':
-          await this.handleSubscriptionDeleted(event.data.object as any);
+          await this.handleSubscriptionDeleted(event.data.object);
           break;
-
         case 'customer.subscription.updated':
-          await this.handleSubscriptionUpdated(event.data.object as any);
+          await this.handleSubscriptionUpdated(event.data.object);
           break;
-
+        case 'invoice.payment_failed':
+          this.logger.warn(`Stripe invoice payment failed: ${event.data.object.id}`);
+          break;
         default:
           this.logger.debug(`Unhandled Stripe event type: ${event.type}`);
       }
-    } catch (err: any) {
-      this.logger.error(`Error processing Stripe event ${event.type}: ${err.message}`);
+    } catch (error) {
+      this.logger.error(`Error processing Stripe event ${event.type}: ${String(error)}`);
+      throw error;
     }
 
     return { received: true };
   }
 
-  private async handleInvoicePaid(invoice: any) {
-    const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id;
-    if (!customerId) return;
-    this.logger.log(`Invoice paid by customer ${customerId} – invoice=${invoice.id}`);
-  }
-
-  private async handleSubscriptionDeleted(sub: any) {
-    const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
-    if (!customerId) return;
+  private async handleSubscriptionDeleted(subscription: any) {
+    const stripeSubscriptionId = subscription.id as string | undefined;
+    if (!stripeSubscriptionId) return;
     const updated = await this.prisma.subscription.updateMany({
-      where: { stripeCustomerId: customerId, status: 'ACTIVE' },
+      where: { stripeSubscriptionId, status: 'ACTIVE' },
       data: { status: 'CANCELED', canceledAt: new Date() },
     });
-    if (updated.count > 0) {
-      this.logger.log(`Cancelled ${updated.count} database subscription(s) for Stripe customer ${customerId}`);
-    }
+    if (updated.count > 0) this.logger.log(`Marked subscription ${stripeSubscriptionId} canceled.`);
   }
 
-  private async handleSubscriptionUpdated(sub: any) {
-    const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id;
-    if (!customerId) return;
-    if (sub.status === 'canceled' || sub.status === 'unpaid') {
-      const updated = await this.prisma.subscription.updateMany({
-        where: { stripeCustomerId: customerId },
-        data: { status: 'CANCELED', canceledAt: new Date() },
-      });
-      this.logger.log(`Marked ${updated.count} subscription(s) CANCELED for Stripe sub ${sub.id} (${sub.status})`);
+  private async handleSubscriptionUpdated(subscription: any) {
+    const stripeSubscriptionId = subscription.id as string | undefined;
+    if (!stripeSubscriptionId) return;
+    if (['canceled', 'unpaid', 'incomplete_expired'].includes(subscription.status)) {
+      await this.handleSubscriptionDeleted(subscription);
     }
   }
 }

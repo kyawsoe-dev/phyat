@@ -150,7 +150,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <PlansSection />
+      <PlansSection user={user} />
     </main>
   );
 }

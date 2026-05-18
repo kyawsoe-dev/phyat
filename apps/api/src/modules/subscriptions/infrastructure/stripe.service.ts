@@ -1,138 +1,113 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException } from '@nestjs/common';
-import * as StripePackage from 'stripe';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as StripePackage from 'stripe';
 
 @Injectable()
 export class StripeService {
-  private readonly stripe: any;
+  private stripeClient?: any;
   private readonly logger = new Logger(StripeService.name);
-  private readonly priceMap: Record<string, { tierCode: string; billingCycle: 'MONTHLY' | 'ANNUAL' }>;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(private readonly config: ConfigService) {}
+
+  getStripe(): any {
+    if (this.stripeClient) return this.stripeClient;
     const secretKey = this.config.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
-      throw new InternalServerErrorException('STRIPE_SECRET_KEY is not set in environment');
+      throw new InternalServerErrorException('STRIPE_SECRET_KEY is not set. Configure Stripe before starting paid checkout.');
     }
-    const Stripe = (StripePackage as any).default ?? (StripePackage as any);
-    this.stripe = new Stripe(secretKey, {
-      apiVersion: '2026-04-22.dahlia',
-    });
+    this.assertLooksLikeStripeSecret(secretKey);
+    const StripeCtor = (StripePackage as any).default ?? (StripePackage as any);
+    this.stripeClient = new StripeCtor(secretKey);
+    return this.stripeClient;
+  }
 
-    // Map env price IDs to tier config
-    this.priceMap = {
-      [this.config.get<string>('STRIPE_PRICE_ID_PRO_MONTHLY')!]:    { tierCode: 'PRO',        billingCycle: 'MONTHLY' },
-      [this.config.get<string>('STRIPE_PRICE_ID_PRO_ANNUAL')!]:      { tierCode: 'PRO',        billingCycle: 'ANNUAL'   },
-      [this.config.get<string>('STRIPE_PRICE_ID_DEVELOPER_MONTHLY')!]: { tierCode: 'DEVELOPER', billingCycle: 'MONTHLY' },
-      [this.config.get<string>('STRIPE_PRICE_ID_DEVELOPER_ANNUAL')!]:   { tierCode: 'DEVELOPER', billingCycle: 'ANNUAL'   },
-    };
-    // Filter out empty / unset keys
-    Object.keys(this.priceMap).forEach((key) => {
-      if (!key) delete this.priceMap[key];
+  getWebhookSecret(): string {
+    const secret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
+    if (!secret) {
+      throw new InternalServerErrorException('STRIPE_WEBHOOK_SECRET is not set. Configure it before receiving Stripe webhooks.');
+    }
+    return secret;
+  }
+
+  getPriceId(tierCode: string, billingCycle: 'MONTHLY' | 'ANNUAL') {
+    const key = `STRIPE_PRICE_ID_${tierCode}_${billingCycle}`;
+    const priceId = this.config.get<string>(key);
+    if (!priceId || priceId.includes('your_') || !priceId.startsWith('price_')) {
+      throw new BadRequestException(`Stripe price ID is missing or invalid for ${tierCode} ${billingCycle}. Set ${key} to a real Stripe recurring Price ID that starts with price_.`);
+    }
+    return priceId;
+  }
+
+  private assertLooksLikeStripeSecret(secretKey: string) {
+    if (secretKey.includes('your_') || !/^sk_(test|live)_/.test(secretKey)) {
+      throw new BadRequestException('STRIPE_SECRET_KEY is missing or invalid. Use a real Stripe key that starts with sk_test_ or sk_live_.');
+    }
+  }
+
+  async createLocalCouponDiscount(percentOff: number, code: string) {
+    if (percentOff <= 0) return undefined;
+    const coupon = await this.getStripe().coupons.create({
+      percent_off: percentOff,
+      duration: 'once',
+      name: `Phyat ${code}`,
+      metadata: { source: 'phyat-local-coupon', code },
     });
+    return { coupon: coupon.id };
   }
 
   async createCheckoutSession(params: {
-    tierCode: string;
+    tierCode: 'PRO' | 'DEVELOPER';
     billingCycle: 'MONTHLY' | 'ANNUAL';
     userId: string;
     userEmail: string;
     successUrl: string;
     cancelUrl: string;
-    couponCode?: string;
-    discountPercent?: number;
+    localCoupon?: { code: string; discountPercent: number };
   }): Promise<{ url: string | null; sessionId: string | null }> {
-    if (params.tierCode === 'FREE') {
-      return { url: null, sessionId: null };
-    }
+    const priceId = this.getPriceId(params.tierCode, params.billingCycle);
+    const discount = params.localCoupon
+      ? await this.createLocalCouponDiscount(params.localCoupon.discountPercent, params.localCoupon.code)
+      : undefined;
 
-    const priceIdKey = `STRIPE_PRICE_ID_${params.tierCode}_${params.billingCycle}`;
-    const priceId = this.config.get<string>(priceIdKey);
+    this.logger.log(`Creating Stripe Checkout session for user ${params.userId}: ${params.tierCode} ${params.billingCycle}`);
 
-    if (!priceId) {
-      throw new BadRequestException(
-        `No Stripe price ID configured for tier "${params.tierCode}" ${params.billingCycle}. ` +
-        `Set ${priceIdKey} in environment variables.`,
-      );
-    }
-
-    const sessionMetadata: Record<string, string> = {
-      userId: params.userId,
-      tierCode: params.tierCode,
-      billingCycle: params.billingCycle,
-    };
-
-    if (params.couponCode) sessionMetadata.couponCode = params.couponCode;
-    if (params.discountPercent !== undefined) sessionMetadata.discountPercent = String(params.discountPercent);
-
-    this.logger.log(`Creating Stripe checkout session for user ${params.userId} → tier ${params.tierCode} ${params.billingCycle}`);
-
-    const sessionParams: any = {
+    const session = await this.getStripe().checkout.sessions.create({
       mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      metadata: sessionMetadata,
+      line_items: [{ price: priceId, quantity: 1 }],
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
       customer_email: params.userEmail,
-      allow_promotion_codes: true,
-    };
-
-    if (params.couponCode) {
-      sessionParams.discounts = [{ coupon: params.couponCode }];
-    }
-
-    const session: any = await this.stripe.checkout.sessions.create(sessionParams);
-    this.logger.log(`Stripe checkout session created: ${session.id}`);
+      client_reference_id: params.userId,
+      allow_promotion_codes: discount ? undefined : true,
+      discounts: discount ? [discount] : undefined,
+      metadata: {
+        userId: params.userId,
+        tierCode: params.tierCode,
+        billingCycle: params.billingCycle,
+        ...(params.localCoupon ? { couponCode: params.localCoupon.code } : {}),
+      },
+      subscription_data: {
+        metadata: {
+          userId: params.userId,
+          tierCode: params.tierCode,
+          billingCycle: params.billingCycle,
+          ...(params.localCoupon ? { couponCode: params.localCoupon.code } : {}),
+        },
+      },
+    });
 
     return { url: session.url ?? null, sessionId: session.id };
   }
 
-  async handleCheckoutSessionCompleted(session: any): Promise<void> {
-    const metadata = session.metadata ?? {};
-    const userId = metadata.userId ?? '';
-    const tierCode = metadata.tierCode ?? '';
-
-    if (!userId || !tierCode) {
-      this.logger.warn(`Checkout session ${session.id} has no user/tier metadata – skipping DB sync`);
-      return;
-    }
-
-    this.logger.log(`Webhook: checkout.session.completed → user=${userId} tier=${tierCode}`);
+  constructWebhookEvent(rawBody: Buffer | string, signature: string) {
+    return this.getStripe().webhooks.constructEvent(rawBody, signature, this.getWebhookSecret());
   }
 
-  async cancelSubscription(stripeSubscriptionId: string): Promise<void> {
-    try {
-      await this.stripe.subscriptions.del(stripeSubscriptionId);
-      this.logger.log(`Cancelled Stripe subscription ${stripeSubscriptionId}`);
-    } catch (err: any) {
-      this.logger.error(`Failed to cancel Stripe subscription ${stripeSubscriptionId}: ${err.message}`);
-      throw err;
-    }
+  retrieveCheckoutSession(sessionId: string) {
+    return this.getStripe().checkout.sessions.retrieve(sessionId, { expand: ['subscription', 'customer'] });
   }
 
-  async findCustomerByEmail(email: string): Promise<any> {
-    const customers = await this.stripe.customers.list({ email, limit: 1 });
-    return customers.data[0] ?? null;
-  }
-
-  async ensureCustomer(userId: string, userEmail: string, userName?: string): Promise<string> {
-    const existing = await this.findCustomerByEmail(userEmail);
-    if (existing) return existing.id;
-
-    const customer = await this.stripe.customers.create({
-      email: userEmail,
-      name: userName ?? undefined,
-      metadata: { userId },
-    });
-    return customer.id;
-  }
-
-  getStripe(): any {
-    return this.stripe;
+  cancelSubscription(stripeSubscriptionId: string) {
+    return this.getStripe().subscriptions.cancel(stripeSubscriptionId);
   }
 }

@@ -3,9 +3,9 @@ import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min, 
 import { Type } from 'class-transformer';
 
 export class CheckoutSessionDto {
-  @ApiProperty({ enum: ['PRO', 'DEVELOPER'] })
-  @IsIn(['PRO', 'DEVELOPER'])
-  tierCode!: 'PRO' | 'DEVELOPER';
+  @ApiProperty({ enum: ['FREE', 'PRO', 'DEVELOPER'] })
+  @IsIn(['FREE', 'PRO', 'DEVELOPER'])
+  tierCode!: 'FREE' | 'PRO' | 'DEVELOPER';
 
   @ApiProperty({ enum: ['MONTHLY', 'ANNUAL'], default: 'MONTHLY' })
   @IsIn(['MONTHLY', 'ANNUAL'])
@@ -67,6 +67,10 @@ export class CheckoutSessionResponse {
   url!: string | null;
   sessionId!: string | null;
   immediate!: boolean;
+  success?: boolean;
+  tierCode?: string;
+  billingCycle?: string;
+  currentPeriodEnd?: string;
 }
 
 export class CouponResponse {

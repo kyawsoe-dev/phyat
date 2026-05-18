@@ -21,7 +21,7 @@ export class ShortenApiController {
     return {
       id: link.id,
       slug: link.slug,
-      shortUrl: `https://${link.shortHost}/${link.slug}`,
+      shortUrl: this.links.shortUrlForHost(link.shortHost, link.slug),
       destination: link.destination,
       expiresAt: link.expiresAt,
       createdAt: link.createdAt,

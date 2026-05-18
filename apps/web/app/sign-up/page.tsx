@@ -9,7 +9,7 @@ import { Logo } from "@/components/logo";
 import { AlertCircle } from "lucide-react";
 import { signUp } from "./actions";
 
-export default function SignUpPage() {
+export default function SignUpPage({ searchParams }: { searchParams?: { tier?: string; billing?: string } }) {
   const [state, formAction] = useFormState(signUp, undefined);
 
   return (
@@ -32,7 +32,9 @@ export default function SignUpPage() {
           </div>
         )}
 
-        <div className="space-y-4">
+        <input type="hidden" name="tier" value={searchParams?.tier ?? ""} />
+          <input type="hidden" name="billing" value={searchParams?.billing ?? ""} />
+          <div className="space-y-4">
           <div className="space-y-1">
             <label htmlFor="name" className="text-sm font-medium">
               Name <span className="text-red-500">*</span>

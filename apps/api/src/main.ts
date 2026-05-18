@@ -8,7 +8,7 @@ import { RateLimitMiddleware } from './common/rate-limit.middleware';
 import { GlobalExceptionFilter } from './common/exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT') ?? 4000;
   const logger = new Logger('Bootstrap');

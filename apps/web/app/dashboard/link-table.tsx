@@ -13,6 +13,7 @@ import {
   ChevronDown,
   ChevronRight as ChevronRightIcon,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import {
   Dialog,
@@ -44,7 +45,11 @@ export type LinkRow = {
   createdAt: string;
   domainId?: string | null;
   domain?: { domain: string } | null;
-  utmParams?: { utm_source?: string; utm_medium?: string; utm_campaign?: string } | null;
+  utmParams?: {
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+  } | null;
   redirectType?: string;
 };
 
@@ -52,9 +57,16 @@ type LinkStats = {
   totalClicks: number;
   byCountry: Array<{ country: string; _count: { country: number } }>;
   byDevice: { mobile: number; desktop: number };
-  byReferrer: Array<{ referrerDomain: string | null; _count: { referrerDomain: number } }>;
+  byReferrer: Array<{
+    referrerDomain: string | null;
+    _count: { referrerDomain: number };
+  }>;
   overTime: Array<{ date: string; clicks: number }>;
-  byCity: Array<{ city: string; country: string | null; _count: { city: number } }>;
+  byCity: Array<{
+    city: string;
+    country: string | null;
+    _count: { city: number };
+  }>;
 };
 
 export function LinkTable({
@@ -97,7 +109,9 @@ export function LinkTable({
   const [showEditAdvanced, setShowEditAdvanced] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "DISABLED">("ALL");
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "ACTIVE" | "DISABLED"
+  >("ALL");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -147,8 +161,16 @@ export function LinkTable({
     }
   }
 
-  function copyUrl(slug: string, shortHost: string, domain?: { domain: string } | null) {
-    const base = domain ? `https://${domain.domain}` : shortHost.startsWith('localhost') ? `http://${shortHost}` : `https://${shortHost}`;
+  function copyUrl(
+    slug: string,
+    shortHost: string,
+    domain?: { domain: string } | null,
+  ) {
+    const base = domain
+      ? `https://${domain.domain}`
+      : shortHost.startsWith("localhost")
+        ? `http://${shortHost}`
+        : `https://${shortHost}`;
     const url = `${base}/${slug}`;
     navigator.clipboard.writeText(url).catch(() => {});
     setCopiedId(slug);
@@ -183,8 +205,16 @@ export function LinkTable({
     setEditingLink(null);
   }
 
-  function linkUrl(slug: string, shortHost: string, domain?: { domain: string } | null): string {
-    const base = domain ? `https://${domain.domain}` : shortHost.startsWith('localhost') ? `http://${shortHost}` : `https://${shortHost}`;
+  function linkUrl(
+    slug: string,
+    shortHost: string,
+    domain?: { domain: string } | null,
+  ): string {
+    const base = domain
+      ? `https://${domain.domain}`
+      : shortHost.startsWith("localhost")
+        ? `http://${shortHost}`
+        : `https://${shortHost}`;
     return `${base}/${slug}`;
   }
 
@@ -205,7 +235,10 @@ export function LinkTable({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <a href="/api/links/export" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted">
+          <a
+            href="/api/links/export"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"
+          >
             <Download size={16} /> Export
           </a>
           {bulkCreateAction && <BulkUploadDialog onCreate={bulkCreateAction} />}
@@ -232,7 +265,9 @@ export function LinkTable({
             <select
               className="h-10 rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "DISABLED")}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "DISABLED")
+              }
             >
               <option value="ALL">All Status</option>
               <option value="ACTIVE">Active</option>
@@ -262,7 +297,9 @@ export function LinkTable({
               <Search size={20} className="text-muted-foreground" />
             </div>
             <p className="text-sm font-medium text-foreground">
-              {search || statusFilter !== "ALL" || startDate || endDate ? "No links match your filters" : "No links yet"}
+              {search || statusFilter !== "ALL" || startDate || endDate
+                ? "No links match your filters"
+                : "No links yet"}
             </p>
             <p className="text-sm text-muted-foreground">
               {search || statusFilter !== "ALL" || startDate || endDate
@@ -323,12 +360,20 @@ export function LinkTable({
                           />
                           {/* Short URL */}
                           <a
-                            href={linkUrl(link.slug, link.shortHost, (link as any).domain)}
+                            href={linkUrl(
+                              link.slug,
+                              link.shortHost,
+                              (link as any).domain,
+                            )}
                             target="_blank"
                             rel="noreferrer"
                             className="truncate text-sm font-semibold text-primary hover:underline"
                           >
-                            {linkUrl(link.slug, link.shortHost, (link as any).domain)}
+                            {linkUrl(
+                              link.slug,
+                              link.shortHost,
+                              (link as any).domain,
+                            )}
                           </a>
                           <ExternalLink
                             size={12}
@@ -351,7 +396,12 @@ export function LinkTable({
                         {link.tags && link.tags.length > 0 && (
                           <div className="pl-[18px] flex flex-wrap gap-1">
                             {link.tags.slice(0, 4).map((tag) => (
-                              <span key={tag} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{tag}</span>
+                              <span
+                                key={tag}
+                                className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
+                              >
+                                {tag}
+                              </span>
                             ))}
                           </div>
                         )}
@@ -383,7 +433,13 @@ export function LinkTable({
                         <button
                           type="button"
                           title="Copy short URL"
-                          onClick={() => copyUrl(link.slug, link.shortHost, (link as any).domain)}
+                          onClick={() =>
+                            copyUrl(
+                              link.slug,
+                              link.shortHost,
+                              (link as any).domain,
+                            )
+                          }
                           className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
                           {copiedId === link.slug ? (
@@ -435,7 +491,7 @@ export function LinkTable({
                           </button>
                         </form>
 
-                        {/* {deleteAction && (
+                        {deleteAction && (
                           <button
                             type="button"
                             title="Delete"
@@ -444,7 +500,7 @@ export function LinkTable({
                           >
                             <Trash2 size={15} />
                           </button>
-                        )} */}
+                        )}
                       </div>
                     </div>
                   </div>
@@ -490,7 +546,10 @@ export function LinkTable({
               <div className="space-y-3">
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="sm:col-span-2">
-                    <label className="mb-1 block text-sm font-medium" htmlFor="edit-destination">
+                    <label
+                      className="mb-1 block text-sm font-medium"
+                      htmlFor="edit-destination"
+                    >
                       Destination URL
                     </label>
                     <Input
@@ -501,13 +560,19 @@ export function LinkTable({
                       required
                       value={editForm.destination}
                       onChange={(e) =>
-                        setEditForm((p) => ({ ...p, destination: e.target.value }))
+                        setEditForm((p) => ({
+                          ...p,
+                          destination: e.target.value,
+                        }))
                       }
                       className="h-9"
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium" htmlFor="edit-title">
+                    <label
+                      className="mb-1 block text-sm font-medium"
+                      htmlFor="edit-title"
+                    >
                       Title
                     </label>
                     <Input
@@ -522,7 +587,10 @@ export function LinkTable({
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium" htmlFor="edit-expiresAt">
+                    <label
+                      className="mb-1 block text-sm font-medium"
+                      htmlFor="edit-expiresAt"
+                    >
                       Expiration
                     </label>
                     <Input
@@ -531,7 +599,10 @@ export function LinkTable({
                       type="datetime-local"
                       value={editForm.expiresAt}
                       onChange={(e) =>
-                        setEditForm((p) => ({ ...p, expiresAt: e.target.value }))
+                        setEditForm((p) => ({
+                          ...p,
+                          expiresAt: e.target.value,
+                        }))
                       }
                       className="h-9"
                     />
@@ -543,7 +614,11 @@ export function LinkTable({
                   onClick={() => setShowEditAdvanced(!showEditAdvanced)}
                   className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                 >
-                  {showEditAdvanced ? <ChevronDown size={13} /> : <ChevronRightIcon size={13} />}
+                  {showEditAdvanced ? (
+                    <ChevronDown size={13} />
+                  ) : (
+                    <ChevronRightIcon size={13} />
+                  )}
                   {showEditAdvanced ? "Hide" : "Show"} advanced options
                 </button>
 
@@ -551,20 +626,33 @@ export function LinkTable({
                   <div className="space-y-3 rounded-lg border border-border p-3 bg-muted/10">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-notes">Notes</label>
+                        <label
+                          className="mb-1 block text-sm font-medium"
+                          htmlFor="edit-notes"
+                        >
+                          Notes
+                        </label>
                         <Input
                           id="edit-notes"
                           name="notes"
                           placeholder="Internal note"
                           value={editForm.notes}
                           onChange={(e) =>
-                            setEditForm((p) => ({ ...p, notes: e.target.value }))
+                            setEditForm((p) => ({
+                              ...p,
+                              notes: e.target.value,
+                            }))
                           }
                           className="h-9"
                         />
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-tags">Tags</label>
+                        <label
+                          className="mb-1 block text-sm font-medium"
+                          htmlFor="edit-tags"
+                        >
+                          Tags
+                        </label>
                         <Input
                           id="edit-tags"
                           name="tags"
@@ -579,27 +667,44 @@ export function LinkTable({
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-sm font-medium">UTM params</label>
+                      <label className="mb-1 block text-sm font-medium">
+                        UTM params
+                      </label>
                       <div className="grid grid-cols-3 gap-2">
                         <Input
                           name="utmSource"
                           placeholder="Source"
                           value={editForm.utmSource}
-                          onChange={(e) => setEditForm((p) => ({ ...p, utmSource: e.target.value }))}
+                          onChange={(e) =>
+                            setEditForm((p) => ({
+                              ...p,
+                              utmSource: e.target.value,
+                            }))
+                          }
                           className="h-9"
                         />
                         <Input
                           name="utmMedium"
                           placeholder="Medium"
                           value={editForm.utmMedium}
-                          onChange={(e) => setEditForm((p) => ({ ...p, utmMedium: e.target.value }))}
+                          onChange={(e) =>
+                            setEditForm((p) => ({
+                              ...p,
+                              utmMedium: e.target.value,
+                            }))
+                          }
                           className="h-9"
                         />
                         <Input
                           name="utmCampaign"
                           placeholder="Campaign"
                           value={editForm.utmCampaign}
-                          onChange={(e) => setEditForm((p) => ({ ...p, utmCampaign: e.target.value }))}
+                          onChange={(e) =>
+                            setEditForm((p) => ({
+                              ...p,
+                              utmCampaign: e.target.value,
+                            }))
+                          }
                           className="h-9"
                         />
                       </div>
@@ -607,31 +712,53 @@ export function LinkTable({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-redirectType">Redirect</label>
+                        <label
+                          className="mb-1 block text-sm font-medium"
+                          htmlFor="edit-redirectType"
+                        >
+                          Redirect
+                        </label>
                         <select
                           id="edit-redirectType"
                           name="redirectType"
                           className="h-9 w-full rounded-lg border border-border bg-background px-3 text-sm shadow-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                           value={editForm.redirectType}
-                          onChange={(e) => setEditForm((p) => ({ ...p, redirectType: e.target.value }))}
+                          onChange={(e) =>
+                            setEditForm((p) => ({
+                              ...p,
+                              redirectType: e.target.value,
+                            }))
+                          }
                         >
                           <option value="TEMPORARY">302 temporary</option>
                           <option value="PERMANENT">301 permanent</option>
                         </select>
                       </div>
                       <div>
-                        <label className="mb-1 block text-sm font-medium" htmlFor="edit-password">
-                          {editingLink.passwordHash ? "Change password" : "Password"}
+                        <label
+                          className="mb-1 block text-sm font-medium"
+                          htmlFor="edit-password"
+                        >
+                          {editingLink.passwordHash
+                            ? "Change password"
+                            : "Password"}
                         </label>
                         <Input
                           id="edit-password"
                           name="password"
                           type="password"
-                          placeholder={editingLink.passwordHash ? "New password" : "Optional"}
+                          placeholder={
+                            editingLink.passwordHash
+                              ? "New password"
+                              : "Optional"
+                          }
                           minLength={6}
                           value={editForm.password}
                           onChange={(e) =>
-                            setEditForm((p) => ({ ...p, password: e.target.value }))
+                            setEditForm((p) => ({
+                              ...p,
+                              password: e.target.value,
+                            }))
                           }
                           className="h-9"
                         />
@@ -668,7 +795,9 @@ export function LinkTable({
                 >
                   Cancel
                 </Button>
-                <Button type="submit" className="h-9">Save changes</Button>
+                <Button type="submit" className="h-9">
+                  Save changes
+                </Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -685,7 +814,11 @@ export function LinkTable({
             <p className="text-sm text-muted-foreground">
               This will permanently delete{" "}
               <strong>
-                {linkUrl(showDeleteConfirm.slug, showDeleteConfirm.shortHost, (showDeleteConfirm as any).domain)}
+                {linkUrl(
+                  showDeleteConfirm.slug,
+                  showDeleteConfirm.shortHost,
+                  (showDeleteConfirm as any).domain,
+                )}
               </strong>
               . This action cannot be undone.
             </p>
