@@ -60,7 +60,7 @@ export class RedirectService {
       }
     }
 
-    this.analytics.trackClick(link.id, context, 'CLICK');
+    void this.analytics.trackClick(link.id, context, 'CLICK');
     void this.links.incrementClickCount(link.id).catch((error: unknown) => {
       this.logger.warn(`Click count update failed for link ${link.id}: ${String(error)}`);
     });
@@ -97,7 +97,7 @@ export class RedirectService {
       }
     }
 
-    this.analytics.trackClick(cached.id, context, 'CLICK');
+    void this.analytics.trackClick(cached.id, context, 'CLICK');
     void this.links.incrementClickCount(cached.id).catch((error: unknown) => {
       this.logger.warn(`Click count update failed for link ${cached.id}: ${String(error)}`);
     });

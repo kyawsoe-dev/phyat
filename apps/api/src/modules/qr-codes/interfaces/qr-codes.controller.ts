@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Headers, Ip, Param, Post, Put, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { CurrentUser } from '../../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -49,10 +49,13 @@ export class QrCodesController {
     @Param('id') id: string,
     @Headers('user-agent') userAgent: string | undefined,
     @Headers('referer') referrer: string | undefined,
-    @Headers('x-forwarded-for') forwardedFor: string | undefined,
-    @Ip() ip: string | undefined,
+    @Req() req: Request,
     @Res() response: Response,
   ) {
-    return this.qrCodes.scan(id, { userAgent, referrer, ip: forwardedFor ?? ip }, response);
+    const forwarded = req.headers['x-forwarded-for'];
+    const clientIp = forwarded
+      ? (Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0])?.trim() || undefined
+      : req.ip || req.socket?.remoteAddress || undefined;
+    return this.qrCodes.scan(id, { userAgent, referrer, ip: clientIp }, response);
   }
 }

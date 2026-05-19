@@ -112,15 +112,18 @@ export default async function GatewayPage({
 
   const qs = new URLSearchParams();
   qs.set("shortHost", metadata.shortHost);
+
+  const fetchHeaders: Record<string, string> = {};
+  const ua = headersList.get("user-agent");
+  if (ua) fetchHeaders["user-agent"] = ua;
+  const ref = headersList.get("referer");
+  if (ref) fetchHeaders.referer = ref;
+  const fwd =
+    headersList.get("x-forwarded-for") || headersList.get("x-real-ip");
+  if (fwd) fetchHeaders["x-forwarded-for"] = fwd;
+
   const response = await fetch(`${apiBaseUrl}/r/${metadata.slug}?${qs}`, {
-    headers: {
-      "user-agent": headersList.get("user-agent") || "",
-      referer: headersList.get("referer") || "",
-      "x-forwarded-for":
-        headersList.get("x-forwarded-for") ||
-        headersList.get("x-real-ip") ||
-        "",
-    },
+    headers: fetchHeaders,
     redirect: "manual",
     cache: "no-store",
   });

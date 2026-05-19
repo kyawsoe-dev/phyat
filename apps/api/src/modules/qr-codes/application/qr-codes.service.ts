@@ -74,7 +74,7 @@ export class QrCodesService {
       this.prisma.qrCode.update({ where: { id }, data: { scanCount: { increment: 1 } } }),
       this.prisma.link.update({ where: { id: qr.linkId }, data: { scanCount: { increment: 1 } } }),
     ]);
-    this.analytics.trackClick(qr.linkId, context, 'SCAN');
+    void this.analytics.trackClick(qr.linkId, context, 'SCAN');
     void this.webhooks.publish(qr.userId, 'QR_SCANNED', { id: qr.id, linkId: qr.linkId });
     return response.redirect(qr.link.redirectType === 'PERMANENT' ? 301 : 302, qr.link.destination);
   }

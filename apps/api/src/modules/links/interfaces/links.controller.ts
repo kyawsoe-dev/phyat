@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Headers, Ip, Param, Post, Put, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
 import { UsageFeature } from '@prisma/client';
@@ -93,6 +94,15 @@ export class LinksController {
     return this.links.getGatewayMetadata(slug, shortHost);
   }
 
+  private extractClientIp(req: Request): string | undefined {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+      const ip = Array.isArray(forwarded) ? forwarded[0] : forwarded.split(',')[0];
+      return ip?.trim() || undefined;
+    }
+    return req.ip || req.socket?.remoteAddress || undefined;
+  }
+
   @Get('r/:slug')
   @ApiOperation({ summary: 'Redirect to the original URL (internal)' })
   async redirect(
@@ -100,11 +110,11 @@ export class LinksController {
     @Query('shortHost') shortHost: string | undefined,
     @Headers('user-agent') userAgent: string | undefined,
     @Headers('referer') referrer: string | undefined,
-    @Headers('x-forwarded-for') forwardedFor: string | undefined,
-    @Ip() ip: string | undefined,
+    @Req() req: Request,
     @Res() response: Response,
   ) {
-    const result = await this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, undefined, shortHost);
+    const clientIp = this.extractClientIp(req);
+    const result = await this.redirects.resolve(slug, { userAgent, referrer, ip: clientIp }, undefined, shortHost);
     return response.redirect(result.statusCode, result.destination);
   }
 
@@ -117,9 +127,9 @@ export class LinksController {
     @Body() body: VerifyPasswordDto,
     @Headers('user-agent') userAgent: string | undefined,
     @Headers('referer') referrer: string | undefined,
-    @Headers('x-forwarded-for') forwardedFor: string | undefined,
-    @Ip() ip: string | undefined,
+    @Req() req: Request,
   ) {
-    return this.redirects.resolve(slug, { userAgent, referrer, ip: forwardedFor ?? ip }, body.password, shortHost);
+    const clientIp = this.extractClientIp(req);
+    return this.redirects.resolve(slug, { userAgent, referrer, ip: clientIp }, body.password, shortHost);
   }
 }
