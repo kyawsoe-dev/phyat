@@ -14,21 +14,32 @@ import {
   Settings,
   PanelLeftClose,
   PanelLeft,
+  LockKeyhole,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { User } from '@/lib/auth';
 
-const navItems = [
+type SidebarFeature = 'customDomains' | 'advancedAnalytics';
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  feature?: SidebarFeature;
+};
+
+const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/links', label: 'Links', icon: Link2 },
   { href: '/dashboard/qr', label: 'QR Codes', icon: QrCode },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3, feature: 'advancedAnalytics' },
   { href: '/dashboard/campaigns', label: 'Campaigns', icon: Megaphone },
-  { href: '/dashboard/domains', label: 'Domains', icon: Globe2 },
+  { href: '/dashboard/domains', label: 'Domains', icon: Globe2, feature: 'customDomains' },
   { href: '/dashboard/plans', label: 'Plans', icon: CreditCard },
   { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ user }: { user: Pick<User, 'tier'> }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
@@ -51,13 +62,15 @@ export function DashboardSidebar() {
         </button>
       </div>
       <nav className="flex-1 space-y-0.5 px-2 py-3">
-        {navItems.map(({ href, label, icon: Icon }) => {
+        {navItems.map(({ href, label, icon: Icon, feature }) => {
           const isActive = pathname === href;
+          const isLocked = feature ? !user.tier[feature] : false;
+          const targetHref = isLocked ? `/dashboard/plans?tier=PRO` : href;
           return (
             <Link
               key={href}
-              href={href}
-              title={collapsed ? label : undefined}
+              href={targetHref}
+              title={collapsed ? `${label}${isLocked ? ' requires upgrade' : ''}` : undefined}
               className={cn(
                 'flex items-center gap-3 rounded-md text-sm font-medium transition-colors',
                 collapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5',
@@ -68,6 +81,7 @@ export function DashboardSidebar() {
             >
               <Icon size={18} className="shrink-0" />
               {!collapsed && <span className="truncate">{label}</span>}
+              {!collapsed && isLocked && <LockKeyhole size={13} className="ml-auto shrink-0" />}
             </Link>
           );
         })}

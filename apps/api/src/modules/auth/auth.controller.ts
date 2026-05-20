@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user';
 import { AuthService } from './auth.service';
-import { ChangePasswordDto, LoginDto, RegisterDto, UpdateProfileDto } from './dto';
+import { ChangePasswordDto, GoogleLoginDto, LoginDto, RegisterDto, UpdateProfileDto } from './dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 @ApiTags('auth')
@@ -23,6 +23,13 @@ export class AuthController {
   @ApiResponse({ status: 201, description: 'Login successful, returns JWT token' })
   login(@Body() input: LoginDto) {
     return this.auth.login(input);
+  }
+
+  @Post('google')
+  @ApiOperation({ summary: 'Login or register with Google' })
+  @ApiResponse({ status: 201, description: 'Google login successful, returns JWT token' })
+  google(@Body() input: GoogleLoginDto) {
+    return this.auth.googleLogin(input);
   }
 
   @UseGuards(JwtAuthGuard)

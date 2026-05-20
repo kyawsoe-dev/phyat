@@ -68,6 +68,7 @@ export default async function SettingsPage() {
           code: user.tier.code,
           name: user.tier.name,
           maxLinks: user.tier.maxLinks,
+          apiAccess: Boolean(user.tier.apiAccess),
         },
       }}
       stats={stats}

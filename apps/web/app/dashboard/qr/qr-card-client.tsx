@@ -50,10 +50,12 @@ export function QRCardClient({
   link,
   updateAction,
   onEdit,
+  canViewAnalytics = true,
 }: {
   link: LinkQR;
   updateAction?: (formData: FormData) => void | Promise<void>;
   onEdit?: (link: LinkQR) => void;
+  canViewAnalytics?: boolean;
 }) {
   const [copiedDataUrl, setCopiedDataUrl] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -83,6 +85,11 @@ export function QRCardClient({
   }
 
   async function toggleExpand() {
+    if (!canViewAnalytics) {
+      window.location.href = '/dashboard/plans?tier=PRO';
+      return;
+    }
+
     if (expanded) {
       setExpanded(false);
       return;
@@ -129,6 +136,7 @@ export function QRCardClient({
           <button
             type="button"
             onClick={toggleExpand}
+            title={canViewAnalytics ? 'QR analytics' : 'QR analytics require Pro'}
             className={`flex items-center gap-1 text-sm font-bold tabular-nums transition-colors hover:text-primary ${
               expanded ? 'text-primary' : 'text-muted-foreground'
             }`}

@@ -38,12 +38,16 @@ export function QRContent({
   updateAction,
   editAction,
   bulkCreateAction,
+  canBulkUpload = true,
+  canViewAnalytics = true,
 }: {
   links: LinkQR[];
   createAction?: (formData: FormData) => Promise<void>;
   updateAction?: (formData: FormData) => void | Promise<void>;
   editAction?: (formData: FormData) => void | Promise<void>;
   bulkCreateAction?: (formData: FormData) => Promise<void>;
+  canBulkUpload?: boolean;
+  canViewAnalytics?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'DISABLED'>('ALL');
@@ -145,7 +149,18 @@ export function QRContent({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {bulkCreateAction && <BulkUploadDialog onCreate={bulkCreateAction} />}
+          {bulkCreateAction && (
+            canBulkUpload ? (
+              <BulkUploadDialog onCreate={bulkCreateAction} />
+            ) : (
+              <a
+                href="/dashboard/plans?tier=PRO"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-muted-foreground hover:bg-muted"
+              >
+                Bulk upload
+              </a>
+            )
+          )}
           {createAction && (
             <Button onClick={() => setCreateOpen(true)}>
               <Plus size={16} /> Create QR
@@ -351,6 +366,7 @@ export function QRContent({
                   link={link}
                   updateAction={updateAction}
                   onEdit={startEdit}
+                  canViewAnalytics={canViewAnalytics}
                 />
               ))}
             </div>

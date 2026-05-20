@@ -72,6 +72,8 @@ export default function CampaignsPage() {
   const [showNewLinkForm, setShowNewLinkForm] = useState(false);
   const [newLinkUrl, setNewLinkUrl] = useState('');
   const [newLinkTitle, setNewLinkTitle] = useState('');
+  const [tierCode, setTierCode] = useState<string | null>(null);
+  const canUseCampaignActions = tierCode !== null && tierCode !== 'FREE';
 
   async function loadCampaigns() {
     setLoading(true);
@@ -95,6 +97,16 @@ export default function CampaignsPage() {
 
   useEffect(() => { loadCampaigns(); }, []);
   useEffect(() => { if (createOpen || editOpen) loadLinks(); }, [createOpen, editOpen, loadLinks]);
+  useEffect(() => {
+    fetch('/api/usage/current')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setTierCode(data?.tier?.code ?? 'FREE'))
+      .catch(() => setTierCode('FREE'));
+  }, []);
+
+  function goToProPlan() {
+    window.location.href = '/dashboard/plans?tier=PRO';
+  }
 
   function setFormFromCampaign(c: Campaign, assigned: any[]) {
     setForm({
@@ -308,6 +320,11 @@ export default function CampaignsPage() {
   }
 
   function toggleAnalytics(id: string) {
+    if (!canUseCampaignActions) {
+      goToProPlan();
+      return;
+    }
+
     if (selectedCampaign === id) {
       setSelectedCampaign(null);
       setCampaignStats(null);
@@ -350,7 +367,7 @@ export default function CampaignsPage() {
                     ? 'bg-primary/10 text-primary hover:bg-primary/20'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
-                title="Analytics"
+                title={canUseCampaignActions ? 'Analytics' : 'Analytics require Pro'}
               >
                 <BarChart3 size={14} />
               </button>
@@ -364,9 +381,16 @@ export default function CampaignsPage() {
               </button>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setDeleteConfirm(c.id); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!canUseCampaignActions) {
+                    goToProPlan();
+                    return;
+                  }
+                  setDeleteConfirm(c.id);
+                }}
                 className="rounded-lg p-2 text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors"
-                title="Delete"
+                title={canUseCampaignActions ? 'Delete' : 'Delete requires Pro'}
               >
                 <Trash2 size={14} />
               </button>

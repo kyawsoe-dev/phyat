@@ -138,7 +138,7 @@ export const metadata: Metadata = {
 };
 
 export default async function QRPage() {
-  await requireUser();
+  const user = await requireUser();
   const links = await getLinksWithQR();
 
   return (
@@ -148,6 +148,8 @@ export default async function QRPage() {
       updateAction={updateQR}
       editAction={editQR}
       bulkCreateAction={bulkCreateQR}
+      canBulkUpload={Boolean(user.tier.bulkImport)}
+      canViewAnalytics={Boolean(user.tier.advancedAnalytics)}
     />
   );
 }

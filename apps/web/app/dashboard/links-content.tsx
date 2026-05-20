@@ -150,7 +150,7 @@ async function bulkCreateLinks(formData: FormData) {
 }
 
 export default async function LinksContent() {
-  await requireUser();
+  const user = await requireUser();
   const { data: links, nextCursor } = await getLinks();
 
   return (
@@ -161,6 +161,10 @@ export default async function LinksContent() {
       editAction={editLink}
       createAction={createLink}
       bulkCreateAction={bulkCreateLinks}
+      canBulkUpload={Boolean(user.tier.bulkImport)}
+      canExport={Boolean(user.tier.exportData)}
+      canViewAnalytics={Boolean(user.tier.advancedAnalytics)}
+      canDelete={user.tier.code !== 'FREE'}
       nextCursor={nextCursor}
     />
   );

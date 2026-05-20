@@ -3,6 +3,7 @@ import { requireUser, authHeaders } from '@/lib/auth';
 import { apiBaseUrl } from '@/lib/utils';
 import { BarChart3, MousePointerClick, Globe2 } from 'lucide-react';
 import { AnalyticsClient } from './analytics-client';
+import { UpgradeRequired } from '@/components/upgrade-required';
 
 type LinkRow = {
   id: string;
@@ -33,7 +34,16 @@ export const metadata: Metadata = {
 };
 
 export default async function AnalyticsPage() {
-  await requireUser();
+  const user = await requireUser();
+  if (!user.tier.advancedAnalytics) {
+    return (
+      <UpgradeRequired
+        title="Analytics require Pro"
+        description="Free accounts can see basic click counts. Upgrade to open detailed link analytics and charts."
+      />
+    );
+  }
+
   const links = await getLinks();
   const totalClicks = links.reduce((sum, l) => sum + l.clickCount, 0);
   const activeLinks = links.filter((l) => l.status === 'ACTIVE').length;

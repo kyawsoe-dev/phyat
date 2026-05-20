@@ -15,7 +15,7 @@ type UserData = {
   email: string;
   name: string | null;
   createdAt: string;
-  tier: { code: string; name: string; maxLinks: number | null };
+  tier: { code: string; name: string; maxLinks: number | null; apiAccess: boolean };
 };
 
 type ApiKey = {
@@ -54,9 +54,9 @@ export function SettingsClient({
     fetch('/api/usage/current').then((r) => (r.ok ? r.json() : null)).then(setUsage).catch(() => setUsage(null));
   }, []);
 
-  const tabs: { id: Tab; label: string; icon: typeof User }[] = [
+  const tabs: { id: Tab; label: string; icon: typeof User; locked?: boolean }[] = [
     { id: 'profile', label: 'Profile', icon: User },
-    { id: 'developer', label: 'Developer API', icon: Code2 },
+    { id: 'developer', label: 'Developer API', icon: Code2, locked: !user.tier.apiAccess },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
   ];
@@ -70,11 +70,11 @@ export function SettingsClient({
 
       {/* Tab Navigation */}
       <div className="flex gap-1 rounded-xl border border-border bg-background p-1 shadow-sm overflow-x-auto">
-        {tabs.map(({ id, label, icon: Icon }) => (
+        {tabs.map(({ id, label, icon: Icon, locked }) => (
           <button
             key={id}
             type="button"
-            onClick={() => setTab(id)}
+            onClick={() => setTab(locked ? 'developer' : id)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               tab === id
                 ? 'bg-primary text-primary-foreground shadow-sm'
@@ -83,12 +83,31 @@ export function SettingsClient({
           >
             <Icon size={16} />
             {label}
+            {locked && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">Pro</span>}
           </button>
         ))}
       </div>
 
       {tab === 'profile' && <ProfileSection user={user} stats={stats} usage={usage} />}
-      {tab === 'developer' && <DeveloperApiSection initialKeys={initialApiKeys} />}
+      {tab === 'developer' && (
+        user.tier.apiAccess ? (
+          <DeveloperApiSection initialKeys={initialApiKeys} />
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="flex items-center gap-2">
+              <KeyRound size={18} className="text-muted-foreground" />
+              <h2 className="text-lg font-semibold">Developer API</h2>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              API keys are available on Pro and Developer plans. You can still review the integration format before upgrading.
+            </p>
+            <Button className="mt-5" asChild>
+              <a href="/dashboard/plans?tier=PRO">Upgrade to Pro</a>
+            </Button>
+            <ApiDocsBlock />
+          </div>
+        )
+      )}
       {tab === 'notifications' && <NotificationsSection />}
       {tab === 'security' && <SecuritySection user={user} />}
     </div>
@@ -476,20 +495,54 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
           </div>
         )}
 
-        {/* Documentation */}
-        <div className="mt-6 rounded-lg bg-muted/50 p-4">
-          <h4 className="text-sm font-semibold">API Usage</h4>
-          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-            <p>Include your API key in the Authorization header:</p>
-            <code className="block rounded border border-border bg-background px-3 py-2 font-mono">
-              Authorization: Bearer phyat_live_your_key_here
-            </code>
-            <p className="mt-2">Example:</p>
-            <code className="block rounded border border-border bg-background px-3 py-2 font-mono">
-              curl -H &quot;Authorization: Bearer phyat_live_your_key_here&quot; \<br />
-              &nbsp;&nbsp;{typeof window !== 'undefined' ? window.location.origin : ''}/api/links
-            </code>
-          </div>
+        <ApiDocsBlock />
+      </div>
+    </div>
+  );
+}
+
+function ApiDocsBlock() {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
+
+  return (
+    <div className="mt-6 rounded-lg bg-muted/50 p-4">
+      <h4 className="text-sm font-semibold">API Integration</h4>
+      <div className="mt-3 space-y-3 text-xs text-muted-foreground">
+        <div>
+          <p className="font-medium text-foreground">Endpoint</p>
+          <code className="mt-1 block rounded border border-border bg-background px-3 py-2 font-mono">
+            POST {origin}/api/v1/shorten
+          </code>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Authentication</p>
+          <code className="mt-1 block rounded border border-border bg-background px-3 py-2 font-mono">
+            Authorization: Bearer phyat_live_your_key_here
+          </code>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Example request</p>
+          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+            curl -X POST {origin}/api/v1/shorten \<br />
+            &nbsp;&nbsp;-H &quot;Authorization: Bearer phyat_live_your_key_here&quot; \<br />
+            &nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \<br />
+            &nbsp;&nbsp;-d &#39;{`{"destination":"https://example.com","title":"Launch page","customAlias":"launch","generateQR":true}`}&#39;
+          </code>
+        </div>
+        <p>
+          The response includes <span className="font-mono">shortUrl</span>, <span className="font-mono">slug</span>, and creation metadata. Pro plans include API keys; Developer plans add higher API limits and webhooks.
+        </p>
+        <div>
+          <p className="font-medium text-foreground">Coupon validation</p>
+          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+            POST {origin}/api/coupons/redeem<br />
+            Content-Type: application/json<br />
+            <br />
+            {`{"code":"SAVE20"}`}
+          </code>
+          <p className="mt-2">
+            Coupon codes are applied from the Plans page before checkout. The seed coupon is <span className="font-mono">SAVE20</span>.
+          </p>
         </div>
       </div>
     </div>

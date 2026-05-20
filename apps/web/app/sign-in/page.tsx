@@ -8,6 +8,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Logo } from "@/components/logo";
 import { AlertCircle } from "lucide-react";
 import { signIn } from "./actions";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
 export default function SignInPage() {
   const [state, formAction] = useFormState(signIn, undefined);
@@ -61,6 +62,14 @@ export default function SignInPage() {
             Sign in
           </Button>
         </div>
+        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+          <div className="my-4 flex items-center gap-3 text-xs uppercase text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            <span>or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+        )}
+        <GoogleSignInButton />
         <p className="mt-5 text-center text-sm text-muted-foreground">
           New to Phyat?{" "}
           <Link className="font-medium text-primary" href="/sign-up">

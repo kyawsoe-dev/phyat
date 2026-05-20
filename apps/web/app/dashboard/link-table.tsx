@@ -76,6 +76,10 @@ export function LinkTable({
   editAction,
   createAction,
   bulkCreateAction,
+  canBulkUpload = true,
+  canExport = true,
+  canViewAnalytics = true,
+  canDelete = true,
   nextCursor,
 }: {
   links: LinkRow[];
@@ -84,6 +88,10 @@ export function LinkTable({
   editAction?: (formData: FormData) => void | Promise<void>;
   createAction?: (formData: FormData) => Promise<void>;
   bulkCreateAction?: (formData: FormData) => Promise<void>;
+  canBulkUpload?: boolean;
+  canExport?: boolean;
+  canViewAnalytics?: boolean;
+  canDelete?: boolean;
   nextCursor?: string | null;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -235,13 +243,33 @@ export function LinkTable({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <a
-            href="/api/links/export"
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"
-          >
-            <Download size={16} /> Export
-          </a>
-          {bulkCreateAction && <BulkUploadDialog onCreate={bulkCreateAction} />}
+          {canExport ? (
+            <a
+              href="/api/links/export"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium hover:bg-muted"
+            >
+              <Download size={16} /> Export
+            </a>
+          ) : (
+            <a
+              href="/dashboard/plans?tier=PRO"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              <Download size={16} /> Export
+            </a>
+          )}
+          {bulkCreateAction && (
+            canBulkUpload ? (
+              <BulkUploadDialog onCreate={bulkCreateAction} />
+            ) : (
+              <a
+                href="/dashboard/plans?tier=PRO"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-muted-foreground hover:bg-muted"
+              >
+                Bulk upload
+              </a>
+            )
+          )}
           {createAction && <CreateLinkForm createLink={createAction} />}
         </div>
       </div>
@@ -449,18 +477,28 @@ export function LinkTable({
                           )}
                         </button>
 
-                        <button
-                          type="button"
-                          title="Analytics"
-                          onClick={() => toggleExpand(link.id)}
-                          className={`rounded-lg p-2 transition-colors hover:bg-muted ${
-                            isExpanded
-                              ? "text-primary"
-                              : "text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          <BarChart3 size={15} />
-                        </button>
+                        {canViewAnalytics ? (
+                          <button
+                            type="button"
+                            title="Analytics"
+                            onClick={() => toggleExpand(link.id)}
+                            className={`rounded-lg p-2 transition-colors hover:bg-muted ${
+                              isExpanded
+                                ? "text-primary"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            <BarChart3 size={15} />
+                          </button>
+                        ) : (
+                          <a
+                            href="/dashboard/plans?tier=PRO"
+                            title="Analytics"
+                            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          >
+                            <BarChart3 size={15} />
+                          </a>
+                        )}
 
                         <button
                           type="button"
@@ -495,7 +533,13 @@ export function LinkTable({
                           <button
                             type="button"
                             title="Delete"
-                            onClick={() => setShowDeleteConfirm(link)}
+                            onClick={() => {
+                              if (!canDelete) {
+                                window.location.href = "/dashboard/plans?tier=PRO";
+                                return;
+                              }
+                              setShowDeleteConfirm(link);
+                            }}
                             className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-red-500"
                           >
                             <Trash2 size={15} />

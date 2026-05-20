@@ -8,9 +8,14 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Logo } from "@/components/logo";
 import { AlertCircle } from "lucide-react";
 import { signUp } from "./actions";
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
 export default function SignUpPage({ searchParams }: { searchParams?: { tier?: string; billing?: string } }) {
   const [state, formAction] = useFormState(signUp, undefined);
+  const googleRedirectTo =
+    searchParams?.tier === "PRO" || searchParams?.tier === "DEVELOPER"
+      ? `/dashboard/plans?tier=${searchParams.tier}&billing=${searchParams.billing === "ANNUAL" ? "ANNUAL" : "MONTHLY"}`
+      : "/dashboard";
 
   return (
     <main className="flex min-h-screen items-center justify-center px-6">
@@ -81,6 +86,14 @@ export default function SignUpPage({ searchParams }: { searchParams?: { tier?: s
             Create account
           </Button>
         </div>
+        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+          <div className="my-4 flex items-center gap-3 text-xs uppercase text-muted-foreground">
+            <div className="h-px flex-1 bg-border" />
+            <span>or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+        )}
+        <GoogleSignInButton redirectTo={googleRedirectTo} />
         <p className="mt-5 text-center text-sm text-muted-foreground">
           Already registered?{" "}
           <Link className="font-medium text-primary" href="/sign-in">

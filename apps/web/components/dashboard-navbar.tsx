@@ -147,7 +147,7 @@ export function DashboardNavbar({ user }: { user: NavUser }) {
                     className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                     onClick={() => setDropdownOpen(false)}
                   >
-                    <Globe2 size={15} /> Back to Landing Page
+                    <Globe2 size={15} /> Back to Home
                   </Link>
                   <hr className="border-border my-1" />
                   <button

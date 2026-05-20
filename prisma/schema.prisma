@@ -75,7 +75,8 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
-  passwordHash String   @map("password_hash")
+  passwordHash String?  @map("password_hash")
+  googleId     String?  @unique @map("google_id")
   isAdmin      Boolean  @default(false) @map("is_admin")
   tierId       String   @map("tier_id")
   tier         Tier     @relation(fields: [tierId], references: [id], onDelete: Restrict)

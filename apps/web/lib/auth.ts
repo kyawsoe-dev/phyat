@@ -8,7 +8,21 @@ export type User = {
   id: string;
   email: string;
   name?: string | null;
-  tier: { code: 'FREE' | 'PRO' | 'DEVELOPER'; name: string; maxLinks: number | null };
+  tier: {
+    code: 'FREE' | 'PRO' | 'DEVELOPER';
+    name: string;
+    maxLinks: number | null;
+    maxLinksPerMonth?: number | null;
+    maxQrCodesPerMonth?: number | null;
+    maxCustomDomains?: number | null;
+    maxApiKeys?: number | null;
+    customDomains?: boolean;
+    apiAccess?: boolean;
+    webhooks?: boolean;
+    advancedAnalytics?: boolean;
+    bulkImport?: boolean;
+    exportData?: boolean;
+  };
 };
 
 export function getToken() {
@@ -62,7 +76,7 @@ export async function requireUser() {
     email: string;
     name?: string | null;
     createdAt: string;
-    tier: { code: 'FREE' | 'PRO' | 'DEVELOPER'; name: string; maxLinks: number | null };
+    tier: User['tier'];
   }>;
 }
 

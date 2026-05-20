@@ -23,6 +23,12 @@ export class LoginDto {
   password!: string;
 }
 
+export class GoogleLoginDto {
+  @IsString()
+  @Length(1, 4096)
+  idToken!: string;
+}
+
 export class UpdateProfileDto {
   @IsOptional()
   @IsString()
