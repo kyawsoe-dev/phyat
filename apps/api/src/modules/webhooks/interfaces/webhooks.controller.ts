@@ -2,12 +2,12 @@ import { Body, Controller, Delete, Get, Param, Post, Put, UseGuards } from '@nes
 import { ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { CreateWebhookDto, UpdateWebhookDto } from '../application/dto';
+import { WebhookAuthGuard } from '../application/webhook-auth.guard';
 import { WebhooksService } from '../application/webhooks.service';
 
 @ApiTags('webhooks')
-@UseGuards(JwtAuthGuard)
+@UseGuards(WebhookAuthGuard)
 @Controller('webhooks')
 export class WebhooksController {
   constructor(private readonly webhooks: WebhooksService) {}

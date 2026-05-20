@@ -505,6 +505,7 @@ function ApiDocsBlock() {
   const origin = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
 
   return (
+    <>
     <div className="mt-6 rounded-lg bg-muted/50 p-4">
       <h4 className="text-sm font-semibold">API Integration</h4>
       <div className="mt-3 space-y-3 text-xs text-muted-foreground">
@@ -546,6 +547,79 @@ function ApiDocsBlock() {
         </div>
       </div>
     </div>
+
+    <div className="mt-6 rounded-lg bg-muted/50 p-4">
+      <h4 className="text-sm font-semibold">Webhook Integration</h4>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Receive real-time HTTP callbacks for events in your account. Available on Developer plans and above.
+      </p>
+      <div className="mt-3 space-y-3 text-xs text-muted-foreground">
+        <div>
+          <p className="font-medium text-foreground">Manage webhooks</p>
+          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+            GET    {origin}/api/webhooks          # List all webhooks<br />
+            POST   {origin}/api/webhooks          # Create a webhook<br />
+            PUT    {origin}/api/webhooks/:id      # Update a webhook<br />
+            DELETE {origin}/api/webhooks/:id      # Delete a webhook<br />
+            POST   {origin}/api/webhooks/:id/test # Send a test event
+          </code>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Create a webhook</p>
+          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+            curl -X POST {origin}/api/webhooks \<br />
+            &nbsp;&nbsp;-H &quot;Authorization: Bearer phyat_live_your_key_here&quot; \<br />
+            &nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \<br />
+            &nbsp;&nbsp;-d &#39;{`{"name":"My Webhook","url":"https://example.com/webhook","events":["LINK_CREATED","LINK_CLICKED"]}`}&#39;
+          </code>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Event types</p>
+          <div className="mt-1 grid grid-cols-2 gap-1">
+            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_CREATED</code>
+            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_UPDATED</code>
+            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_DELETED</code>
+            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_CLICKED</code>
+            <code className="rounded border border-border bg-background px-2 py-1 font-mono">QR_CREATED</code>
+            <code className="rounded border border-border bg-background px-2 py-1 font-mono">QR_SCANNED</code>
+          </div>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Example payload</p>
+          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+            {`{`}<br />
+            &nbsp;&nbsp;{`"event": "LINK_CLICKED",`}<br />
+            &nbsp;&nbsp;{`"payload": {`}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{`"slug": "my-link",`}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{`"destination": "https://example.com",`}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{`"ip": "203.0.113.42",`}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{`"userAgent": "Mozilla/5.0 ...",`}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;{`"timestamp": "2025-06-15T10:30:00.000Z"`}<br />
+            &nbsp;&nbsp;{`},`}<br />
+            &nbsp;&nbsp;{`"createdAt": "2025-06-15T10:30:00.000Z"`}<br />
+            {`}`}
+          </code>
+        </div>
+        <div>
+          <p className="font-medium text-foreground">Signature verification</p>
+          <p className="mt-1">
+            Each webhook request includes a <span className="font-mono">x-phyat-signature</span> header containing an HMAC-SHA256 signature of the request body. Verify it using your webhook secret:
+          </p>
+          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+            # Node.js example<br />
+            const crypto = require(&apos;crypto&apos;);<br />
+            const secret = &apos;your_webhook_secret&apos;;<br />
+            const sig =<br />
+            &nbsp;&nbsp;crypto<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;.createHmac(&apos;sha256&apos;, secret)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;.update(requestBody)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;.digest(&apos;hex&apos;);<br />
+            const isValid = sig === headerSig;
+          </code>
+        </div>
+      </div>
+    </div>
+    </>
   );
 }
 

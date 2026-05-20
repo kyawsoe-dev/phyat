@@ -261,11 +261,11 @@ export default function PlansPage() {
               key={plan.code}
               className={cn(
                 "relative flex flex-col rounded-xl border shadow-sm transition-all",
-                isPro || plan.code === "DEVELOPER"
-                  ? "border-primary ring-2 ring-primary/20"
-                  : "border-border",
-                current ? "ring-2 ring-primary/10" : "",
-                plan.code === "DEVELOPER" ? "" : "",
+                current
+                  ? "border-border"
+                  : isPro || plan.code === "DEVELOPER"
+                    ? "border-primary ring-2 ring-primary/20"
+                    : "border-border",
               )}
             >
               {isPro && (

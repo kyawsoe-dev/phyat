@@ -10,6 +10,7 @@ import { Logo } from './logo';
 import type { User } from '@/lib/auth';
 
 const navLinks = [
+  { href: '#home', label: 'Home' },
   { href: '#platform', label: 'Platform' },
   { href: '#solutions', label: 'Solutions' },
   { href: '#plans', label: 'Plans' },
@@ -33,8 +34,16 @@ export function LandingNav({ user }: { user?: User | null }) {
 
   useEffect(() => {
     const sections = navLinks
+      .filter((l) => l.href !== '#home')
       .map((link) => document.querySelector(link.href))
       .filter((section): section is Element => Boolean(section));
+
+    const handleScroll = () => {
+      if (window.scrollY < 100) {
+        setActive('top');
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -50,7 +59,10 @@ export function LandingNav({ user }: { user?: User | null }) {
     );
 
     sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   useEffect(() => {
@@ -66,18 +78,24 @@ export function LandingNav({ user }: { user?: User | null }) {
         <Logo href="/" className="flex-col" showText={false} onClick={() => setActive('top')} />
 
         <div className="hidden items-center gap-2 rounded-md border border-border bg-muted/40 p-1 text-sm font-medium lg:flex">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className={cn(
-                'rounded-sm px-3 py-2 text-muted-foreground hover:bg-card hover:text-foreground',
-                active === link.href.slice(1) && 'bg-card text-primary shadow-sm',
-              )}
-            >
-              {link.label}
-            </a>
-          ))}
+          {navLinks.map((link) => {
+            const isActive = link.href === '#home'
+              ? active === 'top'
+              : active === link.href.slice(1);
+            return (
+              <a
+                key={link.href}
+                href={link.href}
+                onClick={link.href === '#home' ? () => { window.scrollTo({ top: 0, behavior: 'smooth' }); setActive('top'); } : undefined}
+                className={cn(
+                  'rounded-sm px-3 py-2 text-muted-foreground hover:bg-card hover:text-foreground',
+                  isActive && 'bg-card text-primary shadow-sm',
+                )}
+              >
+                {link.label}
+              </a>
+            );
+          })}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -128,19 +146,31 @@ export function LandingNav({ user }: { user?: User | null }) {
             </div>
 
             <div className="mt-8 space-y-2">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    'block rounded-md px-4 py-3 text-base font-semibold text-muted-foreground hover:bg-muted hover:text-foreground',
-                    active === link.href.slice(1) && 'bg-muted text-primary',
-                  )}
-                  onClick={() => setOpen(false)}
-                >
-                  {link.label}
-                </a>
-              ))}
+              {navLinks.map((link) => {
+                const isActive = link.href === '#home'
+                  ? active === 'top'
+                  : active === link.href.slice(1);
+                return (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={(e) => {
+                      if (link.href === '#home') {
+                        e.preventDefault();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        setActive('top');
+                      }
+                      setOpen(false);
+                    }}
+                    className={cn(
+                      'block rounded-md px-4 py-3 text-base font-semibold text-muted-foreground hover:bg-muted hover:text-foreground',
+                      isActive && 'bg-muted text-primary',
+                    )}
+                  >
+                    {link.label}
+                  </a>
+                );
+              })}
             </div>
 
             <div className="mt-auto grid gap-3">

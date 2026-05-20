@@ -3,6 +3,7 @@
 import { Sparkles, Link2, LockKeyhole, Clock3, QrCode, Menu, X, AlertCircle, ChevronDown, Settings, CreditCard, LogOut, LayoutDashboard, Copy, Check, ExternalLink } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +38,8 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
   const [pending, setPending] = useState(false);
   const [copied, setCopied] = useState(false);
   const [createdLink, setCreatedLink] = useState<null | { id: string; slug: string; shortUrl: string; destination: string; title: string | null; qrCodeDataUrl: string | null }>(null);
+  const pathname = usePathname();
+  const isDocsActive = pathname === '/docs';
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
@@ -127,9 +130,11 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
           <div className="flex items-center gap-4">
             {/* Desktop nav links */}
             <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-foreground">
+              <button type="button" onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setActiveSection(''); }} className={cn('transition-colors', !activeSection ? 'text-primary' : 'hover:text-primary')}>Home</button>
               <a href="#platform" className={cn('transition-colors', activeSection === 'platform' ? 'text-primary' : 'hover:text-primary')}>Platform</a>
               <a href="#solutions" className={cn('transition-colors', activeSection === 'solutions' ? 'text-primary' : 'hover:text-primary')}>Solutions</a>
               <a href="#plans" className={cn('transition-colors', activeSection === 'plans' ? 'text-primary' : 'hover:text-primary')}>Plans</a>
+              <Link href="/docs" className={cn('transition-colors', isDocsActive ? 'text-primary' : 'hover:text-primary')}>Docs</Link>
             </div>
 
             <ThemeToggle />
@@ -240,9 +245,11 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
               )}
 
               <nav className="space-y-0.5 pt-2">
+                <button type="button" onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setOpen(false); setActiveSection(''); }} className="block w-full text-left rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">Home</button>
                 <a href="#platform" className="block rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => setOpen(false)}>Platform</a>
                 <a href="#solutions" className="block rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => setOpen(false)}>Solutions</a>
                 <a href="#plans" className="block rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => setOpen(false)}>Plans</a>
+                <Link href="/docs" className="block rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" onClick={() => setOpen(false)}>Docs</Link>
               </nav>
             </div>
 

@@ -9,11 +9,13 @@ import {
   QrCode,
   ShieldCheck,
   Zap,
+  Webhook,
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/auth';
 import { LandingHeroClient } from '@/components/landing-hero-client';
+import { LandingFooter } from '@/components/landing-footer';
 import { PlansSection } from '@/components/plans-section';
 
 const stats = [
@@ -165,52 +167,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section id="api" className="mx-auto max-w-6xl px-6 py-20">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-          <div>
-            <KeyRound className="rounded-md bg-primary p-2 text-primary-foreground" size={48} />
-            <h2 className="mt-5 text-3xl font-bold">API Integration</h2>
-            <p className="mt-4 text-lg leading-8 text-muted-foreground">
-              Connect Phyat to your own product, admin panel, automation script, or marketing system with API keys.
-            </p>
-            <div className="mt-6 space-y-3">
-              {['Create links from your backend', 'Attach custom aliases, titles, and QR generation', 'Use bearer-token API keys from the dashboard'].map((item) => (
-                <p key={item} className="flex items-center gap-3 text-sm font-medium">
-                  <Check size={17} className="text-primary" /> {item}
-                </p>
-              ))}
-            </div>
-            <Button className="mt-7" asChild>
-              <Link href={user ? '/dashboard/settings' : '/sign-up?tier=PRO'}>View API setup</Link>
-            </Button>
-          </div>
-          <div className="rounded-md border border-border bg-card p-5 shadow-sm">
-            <div className="flex items-center gap-2 border-b border-border pb-3 text-sm font-medium">
-              <Code2 size={16} className="text-primary" />
-              Shorten endpoint
-            </div>
-            <pre className="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6 text-foreground">
-{`POST /api/v1/shorten
-Authorization: Bearer phyat_live_your_key_here
-Content-Type: application/json
-
-{
-  "destination": "https://example.com/launch",
-  "title": "Launch page",
-  "customAlias": "launch",
-  "generateQR": true
-}`}
-            </pre>
-            <p className="mt-4 text-sm leading-6 text-muted-foreground">
-              A successful response returns the new <span className="font-mono">shortUrl</span>, slug, destination, and timestamps. Free users can explore the product first; API keys start on Pro.
-            </p>
-            <p className="mt-3 text-sm leading-6 text-muted-foreground">
-              Coupons are entered on the Plans page before checkout. Try <span className="font-mono">SAVE20</span> in development seed data.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <section id="solutions" className="mx-auto grid max-w-6xl gap-8 px-6 py-20 lg:grid-cols-2">
         <div>
           <h2 className="text-3xl font-bold">Smart Solutions</h2>
@@ -242,6 +198,7 @@ Content-Type: application/json
       </section>
 
       <PlansSection user={user} />
+      <LandingFooter />
     </main>
   );
 }
