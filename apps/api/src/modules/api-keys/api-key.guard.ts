@@ -8,9 +8,17 @@ export class ApiKeyGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const header = request.headers['ph-api-key'];
-    const key = Array.isArray(header) ? header[0] : header;
+    const key = this.extractKey(request);
     request.user = await this.apiKeys.authenticate(key);
     return true;
+  }
+
+  private extractKey(request: AuthenticatedRequest): string | undefined {
+    const phApiKey = request.headers['ph-api-key'];
+    if (phApiKey) return Array.isArray(phApiKey) ? phApiKey[0] : phApiKey;
+
+    const auth = request.headers.authorization;
+    const [type, token] = auth?.split(' ') ?? [];
+    return type === 'Bearer' ? token : undefined;
   }
 }
