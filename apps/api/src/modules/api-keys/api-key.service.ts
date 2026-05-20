@@ -34,6 +34,7 @@ export class ApiKeyService {
         prefix: true,
         lastFour: true,
         createdAt: true,
+        revokedAt: true,
       },
     });
 
@@ -50,7 +51,7 @@ export class ApiKeyService {
 
   list(userId: string) {
     return this.prisma.apiKey.findMany({
-      where: { userId, revokedAt: null },
+      where: { userId },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -59,6 +60,7 @@ export class ApiKeyService {
         lastFour: true,
         lastUsedAt: true,
         createdAt: true,
+        revokedAt: true,
       },
     });
   }

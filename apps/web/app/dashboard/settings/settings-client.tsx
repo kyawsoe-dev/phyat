@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 type UserData = {
   id: string;
@@ -25,6 +26,7 @@ type ApiKey = {
   lastFour: string;
   createdAt: string;
   lastUsedAt?: string | null;
+  revokedAt?: string | null;
 };
 
 type Stats = {
@@ -407,7 +409,11 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
 
   async function revoke(id: string) {
     await fetch(`/api/api-keys/${id}`, { method: 'DELETE' });
-    setKeys((prev) => prev.filter((k) => k.id !== id));
+    setKeys((prev) =>
+      prev.map((k) =>
+        k.id === id ? { ...k, revokedAt: new Date().toISOString() } : k,
+      ),
+    );
     setSecret(null);
   }
 
@@ -468,30 +474,60 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
         {keys.length > 0 && (
           <div className="mt-6 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {keys.length} active key{keys.length !== 1 ? 's' : ''}
+              {keys.filter((k) => !k.revokedAt).length} active key{keys.filter((k) => !k.revokedAt).length !== 1 ? 's' : ''}
+              {keys.some((k) => k.revokedAt) && (
+                <> · {keys.filter((k) => k.revokedAt).length} revoked</>
+              )}
             </p>
-            {keys.map((key) => (
-              <div key={key.id} className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm">
-                <div className="min-w-0 flex-1">
-                  <p className="font-medium">{key.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {key.prefix}_****{key.lastFour}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Created {new Date(key.createdAt).toLocaleDateString()}
-                    {key.lastUsedAt ? ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}` : ' · Never used'}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => revoke(key.id)}
-                  className="rounded-lg p-2 text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors shrink-0 ml-2"
-                  title="Revoke key"
+            {keys.map((key) => {
+              const isRevoked = !!key.revokedAt;
+              return (
+                <div
+                  key={key.id}
+                  className={cn(
+                    'flex items-center justify-between rounded-lg border px-4 py-3 text-sm',
+                    isRevoked
+                      ? 'border-border/50 bg-muted/30'
+                      : 'border-border bg-card',
+                  )}
                 >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className={cn('font-medium', isRevoked && 'text-muted-foreground line-through')}>
+                        {key.name}
+                      </p>
+                      <span
+                        className={cn(
+                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                          isRevoked
+                            ? 'bg-muted text-muted-foreground'
+                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                        )}
+                      >
+                        {isRevoked ? 'Revoked' : 'Active'}
+                      </span>
+                    </div>
+                    <p className={cn('text-xs font-mono', isRevoked ? 'text-muted-foreground/50' : 'text-muted-foreground')}>
+                      {key.prefix}_****{key.lastFour}
+                    </p>
+                    <p className={cn('text-xs mt-0.5', isRevoked ? 'text-muted-foreground/50' : 'text-muted-foreground')}>
+                      Created {new Date(key.createdAt).toLocaleDateString()}
+                      {key.lastUsedAt ? ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}` : ' · Never used'}
+                    </p>
+                  </div>
+                  {!isRevoked && (
+                    <button
+                      type="button"
+                      onClick={() => revoke(key.id)}
+                      className="rounded-lg p-2 text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors shrink-0 ml-2"
+                      title="Revoke key"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

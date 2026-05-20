@@ -18,6 +18,7 @@ async function getApiKeys() {
         lastFour: string;
         createdAt: string;
         lastUsedAt?: string | null;
+        revokedAt?: string | null;
       }>
     >;
   } catch {
