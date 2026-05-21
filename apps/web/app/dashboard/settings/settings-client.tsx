@@ -18,6 +18,7 @@ type UserData = {
   name: string | null;
   createdAt: string;
   user2faEnabled: boolean;
+  hasPassword: boolean;
   tier: { code: string; name: string; maxLinks: number | null; apiAccess: boolean };
 };
 
@@ -769,6 +770,7 @@ function SecuritySection({ user }: { user: UserData }) {
   const [twofaEnabled, setTwofaEnabled] = useState(user.user2faEnabled);
   const [twofaSetupMode, setTwofaSetupMode] = useState(false);
   const [twofaDisablePassword, setTwofaDisablePassword] = useState('');
+  const [twofaDisableToken, setTwofaDisableToken] = useState('');
   const [twofaDisableError, setTwofaDisableError] = useState('');
   const [twofaDisabling, setTwofaDisabling] = useState(false);
 
@@ -851,10 +853,13 @@ function SecuritySection({ user }: { user: UserData }) {
     setTwofaDisableError('');
     setTwofaDisabling(true);
     try {
+      const body = user.hasPassword
+        ? { password: twofaDisablePassword }
+        : { token: twofaDisableToken };
       const res = await fetch('/api/auth/2fa/disable', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ password: twofaDisablePassword }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -862,6 +867,7 @@ function SecuritySection({ user }: { user: UserData }) {
       }
       setTwofaEnabled(false);
       setTwofaDisablePassword('');
+      setTwofaDisableToken('');
       setTwofaSecret('');
       setTwofaOtpauthUrl('');
       setTwofaQrDataUrl('');
@@ -953,18 +959,33 @@ function SecuritySection({ user }: { user: UserData }) {
                 <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">Your account is protected with an authenticator app.</p>
               </div>
               <div className="mt-4 max-w-sm space-y-3">
-                <label className="text-sm font-medium">Enter your password to disable 2FA</label>
-                <Input
-                  type="password"
-                  value={twofaDisablePassword}
-                  onChange={(e) => setTwofaDisablePassword(e.target.value)}
-                  placeholder="Current password"
-                />
+                {user.hasPassword ? (
+                  <>
+                    <label className="text-sm font-medium">Enter your password to disable 2FA</label>
+                    <Input
+                      type="password"
+                      value={twofaDisablePassword}
+                      onChange={(e) => setTwofaDisablePassword(e.target.value)}
+                      placeholder="Current password"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="text-sm font-medium">Enter your authenticator code to disable 2FA</label>
+                    <Input
+                      value={twofaDisableToken}
+                      onChange={(e) => setTwofaDisableToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      className="text-center text-lg tracking-widest font-mono"
+                      maxLength={6}
+                    />
+                  </>
+                )}
                 {twofaDisableError && <p className="text-sm text-red-600">{twofaDisableError}</p>}
                 <Button
                   variant="destructive"
                   onClick={disable2fa}
-                  disabled={!twofaDisablePassword || twofaDisabling}
+                  disabled={user.hasPassword ? !twofaDisablePassword || twofaDisabling : twofaDisableToken.length !== 6 || twofaDisabling}
                 >
                   Disable 2FA
                 </Button>

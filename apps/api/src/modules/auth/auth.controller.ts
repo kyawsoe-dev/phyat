@@ -71,8 +71,8 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('2fa/disable')
   @ApiOperation({ summary: 'Disable 2FA' })
-  disable2fa(@CurrentUser() user: AuthenticatedUser, @Body('password') password: string) {
-    return this.auth.disableUser2fa(user.id, password);
+  disable2fa(@CurrentUser() user: AuthenticatedUser, @Body('password') password: string | undefined, @Body('token') token: string | undefined) {
+    return this.auth.disableUser2fa(user.id, password, token);
   }
 
   @UseGuards(JwtAuthGuard)

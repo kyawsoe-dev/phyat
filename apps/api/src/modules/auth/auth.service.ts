@@ -133,6 +133,7 @@ export class AuthService {
       name: user.name,
       isAdmin: user.isAdmin,
       user2faEnabled: user.user2faEnabled,
+      hasPassword: !!user.passwordHash,
       createdAt: user.createdAt,
       tier: user.tier,
     };
@@ -216,17 +217,35 @@ export class AuthService {
     return { success: true };
   }
 
-  async disableUser2fa(userId: string, password: string) {
+  async disableUser2fa(userId: string, password?: string, token?: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
     });
 
-    if (!user.passwordHash) {
-      throw new UnauthorizedException('Password sign-in is not enabled for this account.');
-    }
-
-    if (!(await bcrypt.compare(password, user.passwordHash))) {
-      throw new UnauthorizedException('Current password is incorrect.');
+    if (user.passwordHash) {
+      if (!password) {
+        throw new UnauthorizedException('Password is required to disable 2FA.');
+      }
+      if (!(await bcrypt.compare(password, user.passwordHash))) {
+        throw new UnauthorizedException('Current password is incorrect.');
+      }
+    } else {
+      if (!token) {
+        throw new UnauthorizedException('Verification code is required to disable 2FA.');
+      }
+      if (!user.user2faSecret) {
+        throw new UnauthorizedException('2FA is not properly configured.');
+      }
+      const normalizedToken = token.replace(/\D/g, '').slice(0, 6);
+      const isValid = speakeasy.totp.verify({
+        secret: user.user2faSecret,
+        encoding: 'base32',
+        token: normalizedToken,
+        window: 2,
+      });
+      if (!isValid) {
+        throw new UnauthorizedException('Invalid verification code.');
+      }
     }
 
     await this.prisma.user.update({
