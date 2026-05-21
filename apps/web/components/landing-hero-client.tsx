@@ -1,13 +1,13 @@
 'use client';
 
-import { Sparkles, Link2, LockKeyhole, Clock3, QrCode, Menu, X, AlertCircle, ChevronDown, Settings, CreditCard, LogOut, LayoutDashboard, Copy, Check, ExternalLink } from 'lucide-react';
+import { Sparkles, Link2, LockKeyhole, Clock3, QrCode, Menu, X, AlertCircle, ChevronDown, Settings, CreditCard, LogOut, LayoutDashboard, Copy, Check, ExternalLink, AlertTriangle } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Logo } from '@/components/logo';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,7 @@ function tierBadgeColor(code: string) {
 export function LandingHeroClient({ user }: { user?: User | null }) {
   const [open, setOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -108,6 +109,13 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
     sections.forEach((s) => observer.observe(s));
     return () => observer.disconnect();
   }, []);
+
+  function signOut() {
+    setSignOutOpen(false);
+    fetch('/api/auth/signout', { method: 'POST' }).finally(() => {
+      window.location.href = '/';
+    });
+  }
 
   return (
     <>
@@ -192,11 +200,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
                     <button
                       type="button"
                       className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-muted transition-colors"
-                      onClick={() => {
-                        fetch('/api/auth/signout', { method: 'POST' }).finally(() => {
-                          window.location.href = '/';
-                        });
-                      }}
+                      onClick={() => { setDropdownOpen(false); setSignOutOpen(true); }}
                     >
                       <LogOut size={15} /> Sign out
                     </button>
@@ -260,11 +264,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
                   <button
                     type="button"
                     className="flex w-full items-center justify-center gap-2 rounded-md px-4 py-2 text-sm text-red-600 hover:bg-muted transition-colors"
-                    onClick={() => {
-                      fetch('/api/auth/signout', { method: 'POST' }).finally(() => {
-                        window.location.href = '/';
-                      });
-                    }}
+                    onClick={() => { setOpen(false); setSignOutOpen(true); }}
                   >
                     <LogOut size={15} /> Sign out
                   </button>
@@ -402,6 +402,24 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
         </div>
       </section>
       </div>
+
+      <Dialog open={signOutOpen} onOpenChange={setSignOutOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+              <AlertTriangle size={24} />
+            </div>
+            <DialogTitle className="text-center">Sign out</DialogTitle>
+            <DialogDescription className="text-center">
+              Are you sure you want to sign out of your account?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setSignOutOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={signOut}>Sign out</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

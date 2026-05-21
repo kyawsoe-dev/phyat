@@ -2,10 +2,18 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Menu, X, Settings, LogOut, ChevronDown, CreditCard, LayoutDashboard, Link2, QrCode, Megaphone, Globe2, BarChart3 } from 'lucide-react';
+import { Menu, X, Settings, LogOut, ChevronDown, CreditCard, LayoutDashboard, Link2, QrCode, Megaphone, Globe2, BarChart3, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { cn } from '@/lib/utils';
 
@@ -44,6 +52,7 @@ function tierBadgeColor(code: string) {
 export function DashboardNavbar({ user }: { user: NavUser }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -64,6 +73,7 @@ export function DashboardNavbar({ user }: { user: NavUser }) {
   }, [mobileOpen]);
 
   function signOut() {
+    setSignOutOpen(false);
     fetch('/api/auth/signout', { method: 'POST' }).finally(() => {
       router.push('/sign-in');
     });
@@ -153,7 +163,7 @@ export function DashboardNavbar({ user }: { user: NavUser }) {
                   <button
                     type="button"
                     className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-muted transition-colors"
-                    onClick={signOut}
+                    onClick={() => { setDropdownOpen(false); setSignOutOpen(true); }}
                   >
                     <LogOut size={15} /> Sign out
                   </button>
@@ -216,13 +226,31 @@ export function DashboardNavbar({ user }: { user: NavUser }) {
             </div>
 
             <div className="mt-auto pt-4 border-t border-border">
-              <Button variant="secondary" className="w-full" onClick={signOut}>
+              <Button variant="secondary" className="w-full" onClick={() => { setMobileOpen(false); setSignOutOpen(true); }}>
                 Sign out
               </Button>
             </div>
           </aside>
         </div>
       )}
+
+      <Dialog open={signOutOpen} onOpenChange={setSignOutOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+              <AlertTriangle size={24} />
+            </div>
+            <DialogTitle className="text-center">Sign out</DialogTitle>
+            <DialogDescription className="text-center">
+              Are you sure you want to sign out of your account?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-center gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setSignOutOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={signOut}>Sign out</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
