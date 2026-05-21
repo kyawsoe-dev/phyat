@@ -75,6 +75,7 @@ export async function requireUser() {
     id: string;
     email: string;
     name?: string | null;
+    isAdmin: boolean;
     createdAt: string;
     tier: User['tier'];
   }>;

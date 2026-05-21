@@ -82,7 +82,7 @@ export function DashboardNavbar({ user }: { user: NavUser }) {
           <div className="flex flex-1 items-center justify-between px-4 sm:px-6">
             {/* Left side */}
             <div className="flex items-center gap-3">
-              <span className="hidden sm:inline text-lg text-foreground">Welcome back to your dashboard</span>
+              <span className="hidden sm:inline text-md text-muted-foreground">Welcome back to your dashboard</span>
               <div className="flex items-center gap-3 lg:hidden">
                 <button
                   type="button"

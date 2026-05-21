@@ -105,13 +105,14 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
+      select: { id: true, email: true, name: true, isAdmin: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     return {
       id: user.id,
       email: user.email,
       name: user.name,
+      isAdmin: user.isAdmin,
       createdAt: user.createdAt,
       tier: user.tier,
     };

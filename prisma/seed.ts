@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -255,6 +256,27 @@ async function main() {
   });
 
   console.log(`Seeded coupon: ${coupon.code} (${coupon.discountPercent}% off)`);
+
+  const adminEmail = 'admin@gmail.com';
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
+  if (!existingAdmin) {
+    const freeTier = await prisma.tier.findUnique({ where: { code: 'FREE' } });
+    if (!freeTier) throw new Error('Free tier not found.');
+
+    const admin = await prisma.user.create({
+      data: {
+        email: adminEmail,
+        name: 'Admin',
+        passwordHash: await bcrypt.hash('Admin@123456', 12),
+        isAdmin: true,
+        tierId: freeTier.id,
+      },
+    });
+    console.log(`Seeded admin user: ${admin.email} (password: Admin@123456)`);
+  } else {
+    console.log(`Admin user already exists: ${adminEmail}`);
+  }
+
   console.log('Seeding complete.');
 }
 
