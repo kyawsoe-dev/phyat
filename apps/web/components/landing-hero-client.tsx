@@ -143,7 +143,7 @@ export function LandingHeroClient({ user }: { user?: User | null }) {
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
-                  className="flex items-center gap-2.5 rounded-md px-3 py-1.5 hover:bg-muted transition-colors"
+                  className="flex items-center gap-2.5 rounded-md px-3 py-1 hover:bg-muted transition-colors"
                   onClick={() => setDropdownOpen(!dropdownOpen)}
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-bold text-primary-foreground">

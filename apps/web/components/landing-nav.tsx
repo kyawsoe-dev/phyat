@@ -74,7 +74,7 @@ export function LandingNav({ user }: { user?: User | null }) {
 
   return (
     <header className="sticky top-0 z-20 border-b border-border bg-[hsl(var(--card)/0.9)] backdrop-blur">
-      <nav className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
         <Logo href="/" className="flex-col" showText={false} onClick={() => setActive('top')} />
 
         <div className="hidden items-center gap-2 rounded-md border border-border bg-muted/40 p-1 text-sm font-medium lg:flex">

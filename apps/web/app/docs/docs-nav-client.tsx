@@ -18,7 +18,7 @@ export function DocsNavClient({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/85">
-        <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+        <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <button
               type="button"

@@ -3,7 +3,6 @@ import { DashboardTrends } from "@/components/dashboard-trends";
 import { revalidatePath } from "next/cache";
 import { authHeaders, requireUser } from "@/lib/auth";
 import { apiBaseUrl } from "@/lib/utils";
-import { CreateLinkForm } from "./create-link-form";
 import type { LinkRow } from "./link-table";
 
 async function getLinks() {
@@ -109,7 +108,6 @@ export default async function DashboardContent() {
             Overview of your shortened links
           </p>
         </div>
-        <CreateLinkForm createLink={createLink} />
       </div>
 
       {/* Stats Cards */}
