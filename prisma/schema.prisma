@@ -59,6 +59,19 @@ enum WebhookDeliveryStatus {
   FAILED
 }
 
+enum InvoiceStatus {
+  PAID
+  UNPAID
+  CANCELLED
+  REFUNDED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
 enum UsageFeature {
   LINKS
   QR_CODES
@@ -89,6 +102,8 @@ model User {
   domains      Domain[]
   apiKeys      ApiKey[]
   subscriptions Subscription[]
+  invoices      Invoice[]
+  upgradeRequests UpgradeRequest[]
   couponRedemptions CouponRedemption[]
   webhookEndpoints WebhookEndpoint[]
   usageCounters UsageCounter[]
@@ -96,6 +111,40 @@ model User {
   updatedAt    DateTime @updatedAt
 
   @@map("users")
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  userId      String        @map("user_id")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int
+  currency    String        @default("usd")
+  description String?
+  status      InvoiceStatus @default(UNPAID)
+  issuedAt    DateTime      @default(now()) @map("issued_at")
+  paidAt      DateTime?     @map("paid_at")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model UpgradeRequest {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestedTierId String        @map("requested_tier_id")
+  tier            Tier          @relation(fields: [requestedTierId], references: [id], onDelete: Restrict)
+  status          RequestStatus @default(PENDING)
+  adminNote       String?       @map("admin_note")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("upgrade_requests")
 }
 
 model Tier {
@@ -130,6 +179,7 @@ model Tier {
   sortOrder     Int           @default(0) @map("sort_order")
   users        User[]
   subscriptions Subscription[]
+  upgradeRequests UpgradeRequest[]
   usageCounters UsageCounter[]
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")

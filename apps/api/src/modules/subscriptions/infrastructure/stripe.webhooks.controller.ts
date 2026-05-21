@@ -2,7 +2,6 @@ import { Controller, Headers, HttpCode, HttpStatus, Logger, Post, Req } from '@n
 import { ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RawBodyRequest } from '@nestjs/common';
 import { Request } from 'express';
-import { SubscriptionsService } from '../application/subscriptions.service';
 import { PrismaService } from '../../../common/prisma.service';
 import { StripeService } from './stripe.service';
 
@@ -12,14 +11,13 @@ export class StripeWebhooksController {
   private readonly logger = new Logger(StripeWebhooksController.name);
 
   constructor(
-    private readonly subsService: SubscriptionsService,
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
   ) {}
 
   @Post('stripe/webhook')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Stripe webhook endpoint for Checkout and subscription events' })
+  @ApiOperation({ summary: 'Stripe webhook endpoint for subscription events' })
   @ApiHeader({ name: 'Stripe-Signature', description: 'Stripe webhook signature for verification', required: true })
   async handleWebhook(
     @Headers('stripe-signature') signature: string | undefined,
@@ -41,9 +39,6 @@ export class StripeWebhooksController {
 
     try {
       switch (event.type) {
-        case 'checkout.session.completed':
-          await this.subsService.syncSubscriptionFromSession(event.data.object.id);
-          break;
         case 'customer.subscription.deleted':
           await this.handleSubscriptionDeleted(event.data.object);
           break;

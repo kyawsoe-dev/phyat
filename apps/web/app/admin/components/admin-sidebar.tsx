@@ -7,12 +7,17 @@ import {
   LayoutDashboard,
   Users,
   BarChart3,
-  Shield,
+  Settings,
   LogOut,
   PanelLeftClose,
   PanelLeft,
   AlertTriangle,
+  Layers,
+  Link as LinkIcon,
+  FileText,
+  ArrowUp,
 } from 'lucide-react';
+import { useAdmin } from '../admin-context';
 import { cn } from '@/lib/utils';
 import {
   Dialog,
@@ -28,7 +33,11 @@ export const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/2fa/setup', label: '2FA Settings', icon: Shield },
+  { href: '/admin/tiers', label: 'Tiers', icon: Layers },
+  { href: '/admin/links', label: 'Links', icon: LinkIcon },
+  { href: '/admin/invoices', label: 'Invoices', icon: FileText },
+  { href: '/admin/upgrade-requests', label: 'Requests', icon: ArrowUp },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -36,6 +45,8 @@ export function AdminSidebar() {
   const [signOutOpen, setSignOutOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+
+  const { pendingRequestsCount } = useAdmin();
 
   function handleSignOut() {
     fetch('/api/auth/signout', { method: 'POST' }).finally(() => {
@@ -70,6 +81,8 @@ export function AdminSidebar() {
               href === '/admin'
                 ? pathname === '/admin'
                 : pathname.startsWith(href);
+            const showBadge = label === 'Requests' && pendingRequestsCount > 0;
+
             return (
               <Link
                 key={href}
@@ -84,7 +97,19 @@ export function AdminSidebar() {
                 )}
               >
                 <Icon size={18} className="shrink-0" />
-                {!collapsed && <span className="truncate">{label}</span>}
+                {!collapsed && (
+                  <span className="truncate flex-1">{label}</span>
+                )}
+                {showBadge && (
+                  <span
+                    className={cn(
+                      'ml-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold text-white',
+                      collapsed && 'absolute -top-0.5 -right-0.5'
+                    )}
+                  >
+                    {pendingRequestsCount > 99 ? '99+' : pendingRequestsCount}
+                  </span>
+                )}
               </Link>
             );
           })}

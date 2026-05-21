@@ -66,55 +66,77 @@ export default function PlansPage() {
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [upgradingCode, setUpgradingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [loadingPending, setLoadingPending] = useState(true);
   const autoCheckoutKey = useRef<string | null>(null);
+  const hasFetchedPendingRef = useRef(false);
 
-  const startCheckout = useCallback(async (tierCode: string, billingCycle = billing) => {
+  const loadPendingRequests = useCallback(async (force = false) => {
+    if (!force && hasFetchedPendingRef.current) return;
+
+    hasFetchedPendingRef.current = true;
+
+    try {
+      const res = await fetch("/api/upgrade-requests", { cache: "no-store" });
+      if (res.status === 429) {
+        // Rate limited — we still want to show the banner if possible
+        setLoadingPending(false);
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        const pending = (Array.isArray(data) ? data : data.requests || []).filter(
+          (r: any) => r.status === "PENDING"
+        );
+        setPendingRequests(pending);
+      }
+    } catch {}
+    setLoadingPending(false);
+  }, []);
+
+  const requestUpgrade = useCallback(async (tierCode: string) => {
+    if (pendingRequests.length > 0) {
+      setError("You already have a pending upgrade request. Please wait for admin review before requesting another plan.");
+      return;
+    }
+
     setError(null);
     setUpgradingCode(tierCode);
     try {
-      const res = await fetch("/api/subscriptions/checkout", {
+      const res = await fetch("/api/upgrade-requests", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          tierCode,
-          billingCycle,
-          couponCode: appliedCouponCode,
-        }),
+        body: JSON.stringify({ tierCode }),
       });
       const data = await res.json();
-
       if (!res.ok) {
-        setError(data.message || "Checkout init failed");
+        setError(data.message || "Request failed");
         setUpgradingCode(null);
         return;
       }
+      setError(null);
 
-      if (data.immediate) {
-        const subRes = await fetch("/api/subscriptions/current", {
-          cache: "no-store",
-        });
-        const subData = await subRes.json();
-        if (subData?.id) setSubscription(subData);
-        setAppliedCouponCode(null);
-        setCouponStatus(null);
-        setUpgradingCode(null);
-        return;
-      }
+      // Optimistic update — avoid extra GET that triggers 429 rate limit
+      const planName = plans.find(p => p.code === tierCode)?.name || tierCode;
+      const optimistic = {
+        id: 'temp-' + Date.now(),
+        status: 'PENDING',
+        tier: { name: planName, code: tierCode },
+        createdAt: new Date().toISOString(),
+      };
+      setPendingRequests([optimistic]);
 
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setError("No checkout URL returned. Please try again.");
-        setUpgradingCode(null);
-      }
+      setUpgradingCode(null);
     } catch (err: any) {
       setError(err.message ?? "Unexpected error");
       setUpgradingCode(null);
     }
-  }, [appliedCouponCode, billing]);
+  }, [pendingRequests, loadPendingRequests]);
 
   // Check URL for payment status on mount
   useEffect(() => {
+    loadPendingRequests(true); // force initial load
+
     const requestedTier = searchParams.get("tier");
     const requestedBilling = searchParams.get("billing");
     if (requestedBilling === "MONTHLY" || requestedBilling === "ANNUAL") {
@@ -129,14 +151,13 @@ export default function PlansPage() {
         .catch(() => {});
     }
     if ((requestedTier === "PRO" || requestedTier === "DEVELOPER") && checkoutStatus !== "success" && checkoutStatus !== "cancelled") {
-      const requestedCycle = requestedBilling === "ANNUAL" ? "ANNUAL" : "MONTHLY";
-      const checkoutKey = `${requestedTier}:${requestedCycle}`;
+      const checkoutKey = `${requestedTier}`;
       if (autoCheckoutKey.current !== checkoutKey) {
         autoCheckoutKey.current = checkoutKey;
-        window.setTimeout(() => startCheckout(requestedTier, requestedCycle), 0);
+        window.setTimeout(() => requestUpgrade(requestedTier), 0);
       }
     }
-  }, [searchParams, startCheckout]);
+  }, [searchParams, requestUpgrade, loadPendingRequests]);
 
   useEffect(() => {
     fetch("/api/plans", { cache: "no-store" })
@@ -233,6 +254,31 @@ export default function PlansPage() {
         </button>
       </div>
 
+      {/* Pending Upgrade Request Status Banner */}
+      {!loadingPending && pendingRequests.length > 0 && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-4 text-sm">
+          <div className="font-medium text-amber-800 dark:text-amber-300">
+            Upgrade request pending
+          </div>
+          <div className="text-amber-700 dark:text-amber-400 mt-1">
+            You have a pending request for <strong>{pendingRequests[0].tier?.name || "a higher plan"}</strong>.
+            An admin will review it shortly. You cannot request another plan until this is processed.
+          </div>
+            <div className="text-xs mt-2 text-amber-600 dark:text-amber-500">
+              Submitted: {new Date(pendingRequests[0].createdAt).toLocaleDateString()}
+            </div>
+
+            {/* Admin contact for payment (manual upgrade) */}
+            <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-900/50 text-xs text-amber-700 dark:text-amber-400">
+              For payment, please contact:
+              <div className="mt-1">
+                Phone: <a href="tel:+959455637738" className="underline hover:no-underline">+959455637738</a><br />
+                Email: <a href="mailto:kyawsoedeveloper@gmail.com" className="underline hover:no-underline">kyawsoedeveloper@gmail.com</a>
+              </div>
+            </div>
+          </div>
+      )}
+
       {/* Plans Grid */}
       <div className="grid gap-6 lg:grid-cols-3 px-4 -mx-4">
         {plans.map((plan) => {
@@ -244,8 +290,10 @@ export default function PlansPage() {
               : plan.monthlyPriceLabel;
           const rawPrice =
             billing === "ANNUAL" ? plan.priceAnnual : plan.priceMonthly;
-          const current = isCurrent(plan.code);
-          const loading = upgradingCode === plan.code;
+           const current = isCurrent(plan.code);
+           const loading = upgradingCode === plan.code;
+           const hasPending = pendingRequests.length > 0;
+           const isPendingForThisPlan = pendingRequests.some((r: any) => r.tier?.code === plan.code);
 
           let effectiveDiscount = 0;
           if (billing === "ANNUAL")
@@ -358,27 +406,29 @@ export default function PlansPage() {
                 </ul>
               </div>
 
-              <div className="p-6 pt-0">
-                <Button
-                  className="w-full"
-                  variant={current ? "secondary" : "primary"}
-                  disabled={current || loading}
-                  onClick={() => startCheckout(plan.code)}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />{" "}
-                      Redirecting…
-                    </>
-                  ) : current ? (
-                    "Current plan"
-                  ) : plan.code === "FREE" ? (
-                    `Switch to ${plan.name}`
-                  ) : (
-                    `Upgrade to ${plan.name}`
-                  )}
-                </Button>
-              </div>
+               <div className="p-6 pt-0">
+                 <Button
+                   className="w-full"
+                   variant={current ? "secondary" : "primary"}
+                   disabled={current || loading || hasPending}
+                   onClick={() => requestUpgrade(plan.code)}
+                 >
+                   {loading ? (
+                     <>
+                       <Loader2 size={16} className="animate-spin" />{" "}
+                       Submitting…
+                     </>
+                   ) : current ? (
+                     "Current plan"
+                   ) : hasPending ? (
+                     isPendingForThisPlan ? "Request pending" : "Pending request exists"
+                   ) : plan.code === "FREE" ? (
+                     `Switch to ${plan.name}`
+                   ) : (
+                     `Upgrade to ${plan.name}`
+                   )}
+                 </Button>
+               </div>
 
               {/* Discount badge on price */}
               {effectiveDiscount > 0 && !current && (

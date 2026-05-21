@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { BillingCycle, TierCode } from '@prisma/client';
 import { PrismaService } from '../../../common/prisma.service';
 import { SubscriptionRepository } from '../infrastructure/subscription.repository';
@@ -6,7 +6,7 @@ import { CouponRepository } from '../infrastructure/coupon.repository';
 import { StripeService } from '../infrastructure/stripe.service';
 import { TIER_SELECT } from './tier-capability.service';
 import { UsageService } from './usage.service';
-import type { AdminTierDto, CheckoutSessionDto, ReorderTiersDto, UpgradeDto } from './dto';
+import type { AdminTierDto, ReorderTiersDto, UpgradeDto } from './dto';
 
 @Injectable()
 export class SubscriptionsService {
@@ -51,89 +51,11 @@ export class SubscriptionsService {
     return this.usage.currentUsage(userId);
   }
 
-  async createCheckoutSession(userId: string, userEmail: string, input: CheckoutSessionDto) {
-    const tier = await this.prisma.tier.findUnique({ where: { code: input.tierCode } });
-    if (!tier || !tier.isActive) throw new NotFoundException('Plan not found');
 
-    const price = input.billingCycle === 'ANNUAL' ? tier.priceAnnual ?? 0 : tier.priceMonthly ?? 0;
-    if (tier.code === 'FREE' || price === 0) {
-      const result = await this.applyTierWithoutPayment(userId, tier.id, tier.code, input.billingCycle);
-      return { ...result, url: null, sessionId: null, immediate: true };
-    }
-
-    let localCoupon: { code: string; discountPercent: number } | undefined;
-    if (input.couponCode) {
-      const coupon = await this.validateCouponForCheckout(userId, input.couponCode);
-      localCoupon = { code: coupon.code, discountPercent: coupon.discountPercent };
-    }
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.WEB_ORIGIN ?? 'http://localhost:3000';
-    const session = await this.stripe.createCheckoutSession({
-      tierCode: tier.code as 'PRO' | 'DEVELOPER',
-      billingCycle: input.billingCycle,
-      userId,
-      userEmail,
-      successUrl: `${appUrl}/dashboard/plans?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${appUrl}/dashboard/plans?checkout=cancelled`,
-      localCoupon,
-    });
-
-    return { ...session, immediate: false };
-  }
-
-  async syncSubscriptionFromSession(sessionId: string) {
-    const session: any = await this.stripe.retrieveCheckoutSession(sessionId);
-    const metadata = session.metadata ?? {};
-    const userId = metadata.userId as string | undefined;
-    const tierCode = metadata.tierCode as TierCode | undefined;
-    const billingCycle = metadata.billingCycle as BillingCycle | undefined;
-
-    if (!userId || !tierCode || !billingCycle) {
-      this.logger.warn(`Stripe session ${sessionId} missing required metadata.`);
-      return;
-    }
-
-    const tier = await this.prisma.tier.findUnique({ where: { code: tierCode } });
-    if (!tier) throw new NotFoundException(`Tier ${tierCode} not found.`);
-
-    const stripeSubscription = typeof session.subscription === 'string' ? null : session.subscription;
-    const stripeSubscriptionId = typeof session.subscription === 'string' ? session.subscription : stripeSubscription?.id ?? null;
-    const stripeCustomerId = typeof session.customer === 'string' ? session.customer : session.customer?.id ?? null;
-    const period = this.periodFromStripeSubscription(stripeSubscription, billingCycle);
-    const now = new Date();
-
-    await this.prisma.$transaction([
-      this.prisma.subscription.updateMany({
-        where: { userId, status: 'ACTIVE' },
-        data: { status: 'CANCELED', canceledAt: now },
-      }),
-      this.prisma.subscription.create({
-        data: {
-          userId,
-          tierId: tier.id,
-          status: 'ACTIVE',
-          billingCycle,
-          currentPeriodStart: period.start,
-          currentPeriodEnd: period.end,
-          stripeCustomerId,
-          stripeSubscriptionId,
-        },
-      }),
-      this.prisma.user.update({ where: { id: userId }, data: { tierId: tier.id } }),
-    ]);
-
-    const couponCode = metadata.couponCode as string | undefined;
-    if (couponCode) await this.redeemCouponAfterPayment(userId, couponCode);
-    this.logger.log(`Synced Stripe Checkout session ${sessionId} for user ${userId}: ${tierCode} ${billingCycle}`);
-  }
 
   async upgrade(userId: string, input: UpgradeDto) {
     const tier = await this.prisma.tier.findUnique({ where: { code: input.tierCode } });
     if (!tier || !tier.isActive) throw new NotFoundException('Plan not found');
-    const price = input.billingCycle === 'ANNUAL' ? tier.priceAnnual ?? 0 : tier.priceMonthly ?? 0;
-    if (tier.code !== 'FREE' && price > 0) {
-      throw new BadRequestException(`Upgrading to ${tier.name} requires Stripe Checkout. Use /subscriptions/checkout.`);
-    }
     return this.applyTierWithoutPayment(userId, tier.id, tier.code, input.billingCycle);
   }
 
@@ -158,7 +80,7 @@ export class SubscriptionsService {
     if (coupon.usedCount >= coupon.maxUses) return { valid: false, discountPercent: 0, message: 'Coupon code has reached its usage limit' };
     const existing = await this.couponRepo.findRedemption(coupon.id, userId);
     if (existing) return { valid: false, discountPercent: 0, message: 'You have already used this code' };
-    return { valid: true, code: coupon.code, discountPercent: coupon.discountPercent, message: `Coupon can be applied at checkout for ${coupon.discountPercent}% off.` };
+    return { valid: true, code: coupon.code, discountPercent: coupon.discountPercent, message: `Coupon is valid (${coupon.discountPercent}% off).` };
   }
 
   async createTier(input: AdminTierDto) {
@@ -195,36 +117,10 @@ export class SubscriptionsService {
     return { success: true, tierCode, billingCycle, amount: 0, discountPercent: 0, currentPeriodEnd: periodEnd.toISOString() };
   }
 
-  private async validateCouponForCheckout(userId: string, code: string) {
-    const coupon = await this.couponRepo.findByCode(code);
-    if (!coupon || !coupon.isActive) throw new BadRequestException('Invalid or expired coupon code');
-    if (coupon.expiresAt && coupon.expiresAt < new Date()) throw new BadRequestException('Coupon code has expired');
-    if (coupon.usedCount >= coupon.maxUses) throw new BadRequestException('Coupon code has reached its usage limit');
-    const redemption = await this.couponRepo.findRedemption(coupon.id, userId);
-    if (redemption) throw new BadRequestException('You have already used this code');
-    return coupon;
-  }
-
-  private async redeemCouponAfterPayment(userId: string, code: string) {
-    const coupon = await this.couponRepo.findByCode(code);
-    if (!coupon) return;
-    const existing = await this.couponRepo.findRedemption(coupon.id, userId);
-    if (!existing) {
-      await this.couponRepo.createRedemption(coupon.id, userId);
-      await this.couponRepo.incrementUsed(coupon.id);
-    }
-  }
-
-  private periodFromStripeSubscription(subscription: any, billingCycle: BillingCycle) {
-    const startSeconds = subscription?.current_period_start ?? subscription?.items?.data?.[0]?.current_period_start;
-    const endSeconds = subscription?.current_period_end ?? subscription?.items?.data?.[0]?.current_period_end;
-    const start = startSeconds ? new Date(startSeconds * 1000) : new Date();
-    const end = endSeconds ? new Date(endSeconds * 1000) : new Date(start);
-    if (!endSeconds) {
-      if (billingCycle === 'ANNUAL') end.setFullYear(end.getFullYear() + 1);
-      else end.setMonth(end.getMonth() + 1);
-    }
-    return { start, end };
+  async applyTier(userId: string, tierCode: TierCode, billingCycle: BillingCycle) {
+    const tier = await this.prisma.tier.findUnique({ where: { code: tierCode } });
+    if (!tier) throw new NotFoundException('Tier not found.');
+    return this.applyTierWithoutPayment(userId, tier.id, tierCode, billingCycle);
   }
 
   private formatPlan(tier: any) {

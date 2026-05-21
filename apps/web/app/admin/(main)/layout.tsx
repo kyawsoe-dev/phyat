@@ -4,6 +4,7 @@ import { apiBaseUrl } from '@/lib/utils';
 import { getAdminToken, getAdmin2faToken } from '@/lib/admin-auth';
 import { AdminSidebar } from '../components/admin-sidebar';
 import { AdminNavbar } from '../components/admin-navbar';
+import { AdminProvider } from '../admin-context';
 
 export const metadata: Metadata = {
   title: 'Admin Panel',
@@ -38,14 +39,16 @@ export default async function AdminMainLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="min-h-screen bg-background pt-16">
-      <AdminNavbar user={{ email: user.email, name: user.name }} />
-      <div className="flex min-h-[calc(100vh-4rem)]">
-        <AdminSidebar />
-        <main className="flex-1 min-w-0 px-6 py-8">
-          {children}
-        </main>
+    <AdminProvider>
+      <div className="min-h-screen bg-background pt-16">
+        <AdminNavbar user={{ email: user.email, name: user.name }} />
+        <div className="flex min-h-[calc(100vh-4rem)]">
+          <AdminSidebar />
+          <main className="flex-1 min-w-0 px-6 py-8">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </AdminProvider>
   );
 }

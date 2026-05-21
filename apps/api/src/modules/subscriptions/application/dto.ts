@@ -1,21 +1,6 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty } from '@nestjs/swagger';
 import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, MaxLength, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
-
-export class CheckoutSessionDto {
-  @ApiProperty({ enum: ['FREE', 'PRO', 'DEVELOPER'] })
-  @IsIn(['FREE', 'PRO', 'DEVELOPER'])
-  tierCode!: 'FREE' | 'PRO' | 'DEVELOPER';
-
-  @ApiProperty({ enum: ['MONTHLY', 'ANNUAL'], default: 'MONTHLY' })
-  @IsIn(['MONTHLY', 'ANNUAL'])
-  billingCycle!: 'MONTHLY' | 'ANNUAL';
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  couponCode?: string;
-}
 
 export class UpgradeDto {
   @ApiProperty({ enum: ['PRO', 'DEVELOPER'] })
@@ -25,11 +10,6 @@ export class UpgradeDto {
   @ApiProperty({ enum: ['MONTHLY', 'ANNUAL'], default: 'MONTHLY' })
   @IsIn(['MONTHLY', 'ANNUAL'])
   billingCycle!: 'MONTHLY' | 'ANNUAL';
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  couponCode?: string;
 }
 
 export class RedeemCouponDto {
@@ -61,16 +41,6 @@ export class SubscriptionResponse {
   createdAt!: string;
   stripeCustomerId?: string | null;
   stripeSubscriptionId?: string | null;
-}
-
-export class CheckoutSessionResponse {
-  url!: string | null;
-  sessionId!: string | null;
-  immediate!: boolean;
-  success?: boolean;
-  tierCode?: string;
-  billingCycle?: string;
-  currentPeriodEnd?: string;
 }
 
 export class CouponResponse {

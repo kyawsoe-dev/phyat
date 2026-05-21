@@ -1,11 +1,11 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards, Headers } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiHeader } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CurrentUser } from '../../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../../common/auth/authenticated-user';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { AdminGuard } from '../../../common/auth/admin.guard';
 import { SubscriptionsService } from '../application/subscriptions.service';
-import { AdminTierDto, ReorderTiersDto, TierStatusDto, UpgradeDto, RedeemCouponDto, CheckoutSessionDto, CheckoutSessionResponse } from '../application/dto';
+import { AdminTierDto, ReorderTiersDto, TierStatusDto, UpgradeDto, RedeemCouponDto } from '../application/dto';
 
 @ApiTags('subscriptions')
 @Controller()
@@ -32,31 +32,10 @@ export class SubscriptionsController {
     return this.subs.getCurrentUsage(user.id);
   }
 
-  /**
-   * Create a Stripe Checkout session and return the URL.
-   * For FREE tier (or zero-price tiers) the DB upgrade happens immediately with no payment.
-   */
-  @Post('subscriptions/checkout')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({
-    summary: 'Create a Stripe Checkout session for the selected tier',
-    description:
-      'Returns a checkout URL for paid tiers. For FREE tier (or zero-price tiers) the upgrade is applied immediately with no payment redirect.',
-  })
-  async createCheckout(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() input: CheckoutSessionDto,
-  ): Promise<CheckoutSessionResponse> {
-    return this.subs.createCheckoutSession(user.id, user.email, input);
-  }
-
-  /**
-   * Free / DB-only upgrade (no payment page). Kept for FREE tier and backward compatibility.
-   * For paid tiers this now returns an error asking the caller to use /subscriptions/checkout instead.
-   */
+  /** Admin-only: apply tier upgrade without payment (used by upgrade request approvals too). */
   @Post('subscriptions/upgrade')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Upgrade to a plan without payment (free tier / DB-only)' })
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @ApiOperation({ summary: 'Upgrade a user to a plan (admin, no payment, DB-only)' })
   upgrade(@CurrentUser() user: AuthenticatedUser, @Body() input: UpgradeDto) {
     return this.subs.upgrade(user.id, input);
   }

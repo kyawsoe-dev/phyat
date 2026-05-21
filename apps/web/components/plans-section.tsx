@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Check, Sparkles, Zap, Code2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ export function PlansSection({ user }: { user?: UserLike }) {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [checkoutCode, setCheckoutCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const hasFetchedPendingRef = useRef(false);
 
   useEffect(() => {
     fetch("/api/plans", { cache: "no-store" })
@@ -41,7 +43,27 @@ export function PlansSection({ user }: { user?: UserLike }) {
       .then(setPlans)
       .catch(() => setError("Unable to load plans right now."))
       .finally(() => setLoadingPlans(false));
-  }, []);
+
+    // Load pending upgrade requests if logged in (only once to avoid 429)
+    if (user && !hasFetchedPendingRef.current) {
+      hasFetchedPendingRef.current = true;
+      fetch("/api/upgrade-requests", { cache: "no-store" })
+        .then((r) => {
+          if (r.status === 429) {
+            // Rate limited — still show banner if we had previous data
+            return null;
+          }
+          return r.ok ? r.json() : [];
+        })
+        .then((data) => {
+          if (data) {
+            const list = Array.isArray(data) ? data : data.requests || [];
+            setPendingRequests(list.filter((r: any) => r.status === "PENDING"));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   async function choosePlan(plan: Plan) {
     setError(null);
@@ -56,30 +78,42 @@ export function PlansSection({ user }: { user?: UserLike }) {
       return;
     }
 
+    // Prevent multiple requests
+    if (pendingRequests.length > 0) {
+      setError("You have a pending upgrade request. Please wait for admin review.");
+      setCheckoutCode(null);
+      return;
+    }
+
     setCheckoutCode(plan.code);
     try {
-      const response = await fetch("/api/subscriptions/checkout", {
+      const response = await fetch("/api/upgrade-requests", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tierCode: plan.code, billingCycle: billing }),
+        body: JSON.stringify({ tierCode: plan.code }),
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.message ?? "Unable to start checkout.");
+        setError(data.message ?? "Unable to submit upgrade request.");
         setCheckoutCode(null);
         return;
       }
-      if (data.immediate) {
-        router.push("/dashboard/plans?checkout=success");
-        return;
-      }
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-      setError("No checkout URL returned. Please try again.");
+      // Proper feedback - no more native alert
+      setError(null);
+
+      // Optimistic update instead of another network call (prevents 429 rate limit)
+      const newPending = {
+        id: 'temp-' + Date.now(),
+        status: 'PENDING',
+        tier: { name: plan.name, code: plan.code },
+        createdAt: new Date().toISOString(),
+      };
+      setPendingRequests([newPending]);
+
+      setCheckoutCode(null);
+      // Optional: redirect to settings requests tab if exists, or just show success via pending banner
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to start checkout.");
+      setError(err instanceof Error ? err.message : "Unable to submit request.");
     } finally {
       setCheckoutCode(null);
     }
@@ -100,21 +134,48 @@ export function PlansSection({ user }: { user?: UserLike }) {
 
         {error && <p className="mt-4 text-center text-sm text-red-600">{error}</p>}
 
+        {/* Pending request banner - exactly matching user dashboard plans page */}
+        {user && pendingRequests.length > 0 && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-4 text-sm max-w-2xl mx-auto">
+            <div className="font-medium text-amber-800 dark:text-amber-300">
+              Upgrade request pending
+            </div>
+            <div className="text-amber-700 dark:text-amber-400 mt-1">
+              You have a pending request for <strong>{pendingRequests[0].tier?.name || "a higher plan"}</strong>.
+              An admin will review it shortly. You cannot request another plan until this is processed.
+            </div>
+            <div className="text-xs mt-2 text-amber-600 dark:text-amber-500">
+              Submitted: {new Date(pendingRequests[0].createdAt).toLocaleDateString()}
+            </div>
+
+            {/* Admin contact for payment (manual upgrade) */}
+            <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-900/50 text-xs text-amber-700 dark:text-amber-400">
+              For payment, please contact:
+              <div className="mt-1">
+                Phone: <a href="tel:+959455637738" className="underline hover:no-underline">+959455637738</a><br />
+                Email: <a href="mailto:kyawsoedeveloper@gmail.com" className="underline hover:no-underline">kyawsoedeveloper@gmail.com</a>
+              </div>
+            </div>
+          </div>
+        )}
+
         {loadingPlans ? (
           <div className="mt-10 flex justify-center py-16 text-muted-foreground"><Loader2 className="animate-spin" size={22} /></div>
-        ) : (
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {plans.map((plan) => {
-              const Icon = iconMap[plan.code] ?? Sparkles;
-              const isPopular = plan.code === "PRO";
-              const isAnnual = billing === "ANNUAL";
-              const priceLabel = isAnnual ? plan.annualPriceLabel : plan.monthlyPriceLabel;
-              const showAnnualNote = isAnnual && plan.annualDiscountPercent > 0;
-              const isCurrent = user?.tier?.code === plan.code;
-              const isLoading = checkoutCode === plan.code;
+         ) : (
+           <div className="mt-10 flex flex-col md:flex-row gap-6">
+             {plans.map((plan) => {
+               const Icon = iconMap[plan.code] ?? Sparkles;
+               const isPopular = plan.code === "PRO";
+               const isAnnual = billing === "ANNUAL";
+               const priceLabel = isAnnual ? plan.annualPriceLabel : plan.monthlyPriceLabel;
+               const showAnnualNote = isAnnual && plan.annualDiscountPercent > 0;
+               const isCurrent = user?.tier?.code === plan.code;
+               const isLoading = checkoutCode === plan.code;
+               const hasPending = pendingRequests.length > 0;
+               const isPendingForThis = pendingRequests.some((r: any) => r.tier?.code === plan.code);
 
-              return (
-                <div key={plan.code} className={cn("relative flex flex-col rounded-xl border shadow-sm transition-all bg-card", isPopular ? "border-primary ring-2 ring-primary/10" : "border-border")}>
+               return (
+                 <div key={plan.code} className={cn("relative flex flex-col rounded-xl border shadow-sm transition-all bg-card flex-1", isPopular ? "border-primary ring-2 ring-primary/10" : "border-border")}>
                   {isPopular && <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-0.5 text-xs font-bold text-primary-foreground">Popular</span>}
                   {isCurrent && <span className="absolute top-3 right-3 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">Current</span>}
 
@@ -143,9 +204,21 @@ export function PlansSection({ user }: { user?: UserLike }) {
                   </div>
 
                   <div className={cn("p-7 pt-0", isPopular && "pb-8")}>
-                    <Button type="button" className="w-full" variant="secondary" disabled={isLoading || isCurrent} onClick={() => choosePlan(plan)}>
-                      {isLoading ? <><Loader2 size={16} className="animate-spin" /> Starting checkout</> : isCurrent ? "Current plan" : !user ? plan.code === "FREE" ? "Get started free" : `Sign up for ${plan.name}` : plan.code === "FREE" ? "Switch to Free" : `Choose ${plan.name}`}
-                    </Button>
+                     <Button type="button" className="w-full" variant="secondary" disabled={isLoading || isCurrent || (hasPending && user)} onClick={() => choosePlan(plan)}>
+                       {isLoading ? (
+                         <><Loader2 size={16} className="animate-spin" /> Submitting...</>
+                       ) : isCurrent ? (
+                         "Current plan"
+                       ) : hasPending && user ? (
+                         isPendingForThis ? "Request pending" : "Pending request exists"
+                       ) : !user ? (
+                         plan.code === "FREE" ? "Get started free" : `Sign up for ${plan.name}`
+                       ) : plan.code === "FREE" ? (
+                         "Switch to Free"
+                       ) : (
+                         `Choose ${plan.name}`
+                       )}
+                     </Button>
                   </div>
 
                   {showAnnualNote && <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-green-500 px-3 py-0.5 text-xs font-bold text-white shadow-sm">{plan.annualDiscountPercent}% OFF</div>}

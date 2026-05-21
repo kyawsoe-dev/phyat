@@ -93,3 +93,27 @@ export async function DELETE(
   const data = await response.json().catch(() => null);
   return NextResponse.json(data, { status: response.status });
 }
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { path: string[] } },
+) {
+  const token = getAdminToken();
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const path = params.path.join('/');
+  const body = await request.json().catch(() => ({}));
+  const url = `${apiBaseUrl}/admin/${path}`;
+
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+
+  const data = await response.json().catch(() => null);
+  return NextResponse.json(data, { status: response.status });
+}

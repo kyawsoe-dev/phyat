@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ChevronDown, LogOut, Shield, Menu, X, AlertTriangle } from 'lucide-react';
+import { ChevronDown, LogOut, Settings, Menu, X, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -108,11 +108,11 @@ export function AdminNavbar({ user }: { user: AdminUser }) {
                       <p className="text-xs text-muted-foreground">{user.email}</p>
                     </div>
                     <Link
-                      href="/admin/2fa/setup"
+                      href="/admin/settings"
                       className="flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted transition-colors"
                       onClick={() => setDropdownOpen(false)}
                     >
-                      <Shield size={15} /> 2FA Settings
+                      <Settings size={15} /> Settings
                     </Link>
                     <hr className="border-border my-1" />
                     <button

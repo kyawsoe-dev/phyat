@@ -1,16 +1,38 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
-  User, KeyRound, Bell, Shield, Code2, Eye, EyeOff,
-  Copy, Check, Trash2, Plus, ExternalLink, Save, Pencil,
-  Link2, QrCode, Megaphone, Globe2, BarChart3, ArrowRight, BadgeCheck,
-  CalendarDays, LayoutDashboard, CreditCard, RefreshCw,
-} from 'lucide-react';
-import Image from 'next/image';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+  User,
+  KeyRound,
+  Bell,
+  Shield,
+  Code2,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Trash2,
+  Plus,
+  ExternalLink,
+  Save,
+  Pencil,
+  Link2,
+  QrCode,
+  Megaphone,
+  Globe2,
+  BarChart3,
+  ArrowRight,
+  BadgeCheck,
+  CalendarDays,
+  LayoutDashboard,
+  CreditCard,
+  RefreshCw,
+  FileText,
+} from "lucide-react";
+import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type UserData = {
   id: string;
@@ -19,7 +41,12 @@ type UserData = {
   createdAt: string;
   user2faEnabled: boolean;
   hasPassword: boolean;
-  tier: { code: string; name: string; maxLinks: number | null; apiAccess: boolean };
+  tier: {
+    code: string;
+    name: string;
+    maxLinks: number | null;
+    apiAccess: boolean;
+  };
 };
 
 type ApiKey = {
@@ -39,9 +66,13 @@ type Stats = {
   domainCount: number;
 };
 
-type UsageInfo = { usage: Record<string, number>; limits: Record<string, number | null>; month: string } | null;
+type UsageInfo = {
+  usage: Record<string, number>;
+  limits: Record<string, number | null>;
+  month: string;
+} | null;
 
-type Tab = 'profile' | 'developer' | 'notifications' | 'security';
+type Tab = "profile" | "developer" | "notifications" | "security";
 
 export function SettingsClient({
   user,
@@ -52,25 +83,40 @@ export function SettingsClient({
   stats: Stats;
   initialApiKeys: ApiKey[];
 }) {
-  const [tab, setTab] = useState<Tab>('profile');
+  const [tab, setTab] = useState<Tab>("profile");
   const [usage, setUsage] = useState<UsageInfo>(null);
 
   useEffect(() => {
-    fetch('/api/usage/current').then((r) => (r.ok ? r.json() : null)).then(setUsage).catch(() => setUsage(null));
+    fetch("/api/usage/current")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setUsage)
+      .catch(() => setUsage(null));
   }, []);
 
-  const tabs: { id: Tab; label: string; icon: typeof User; locked?: boolean }[] = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'developer', label: 'Developer API', icon: Code2, locked: !user.tier.apiAccess },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'security', label: 'Security', icon: Shield },
+  const tabs: {
+    id: Tab;
+    label: string;
+    icon: typeof User;
+    locked?: boolean;
+  }[] = [
+    { id: "profile", label: "Profile", icon: User },
+    {
+      id: "developer",
+      label: "Developer API",
+      icon: Code2,
+      locked: !user.tier.apiAccess,
+    },
+    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "security", label: "Security", icon: Shield },
   ];
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Manage your account, API keys, and preferences</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage your account, API keys, and preferences
+        </p>
       </div>
 
       {/* Tab Navigation */}
@@ -79,23 +125,29 @@ export function SettingsClient({
           <button
             key={id}
             type="button"
-            onClick={() => setTab(locked ? 'developer' : id)}
+            onClick={() => setTab(locked ? "developer" : id)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
               tab === id
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             }`}
           >
             <Icon size={16} />
             {label}
-            {locked && <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">Pro</span>}
+            {locked && (
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase text-muted-foreground">
+                Pro
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {tab === 'profile' && <ProfileSection user={user} stats={stats} usage={usage} />}
-      {tab === 'developer' && (
-        user.tier.apiAccess ? (
+      {tab === "profile" && (
+        <ProfileSection user={user} stats={stats} usage={usage} />
+      )}
+      {tab === "developer" &&
+        (user.tier.apiAccess ? (
           <DeveloperApiSection initialKeys={initialApiKeys} />
         ) : (
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
@@ -104,23 +156,31 @@ export function SettingsClient({
               <h2 className="text-lg font-semibold">Developer API</h2>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
-              API keys are available on Pro and Developer plans. You can still review the integration format before upgrading.
+              API keys are available on Pro and Developer plans. You can still
+              review the integration format before upgrading.
             </p>
             <Button className="mt-5" asChild>
               <a href="/dashboard/plans?tier=PRO">Upgrade to Pro</a>
             </Button>
             <ApiDocsBlock />
           </div>
-        )
-      )}
-      {tab === 'notifications' && <NotificationsSection />}
-      {tab === 'security' && <SecuritySection user={user} />}
+        ))}
+      {tab === "notifications" && <NotificationsSection />}
+      {tab === "security" && <SecuritySection user={user} />}
     </div>
   );
 }
 
-function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; usage: UsageInfo }) {
-  const [name, setName] = useState(user.name ?? '');
+function ProfileSection({
+  user,
+  stats,
+  usage,
+}: {
+  user: UserData;
+  stats: Stats;
+  usage: UsageInfo;
+}) {
+  const [name, setName] = useState(user.name ?? "");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -128,9 +188,9 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const res = await fetch('/api/auth/me', {
-      method: 'PUT',
-      headers: { 'content-type': 'application/json' },
+    const res = await fetch("/api/auth/me", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ name: name || null }),
     });
     if (res.ok) {
@@ -141,9 +201,16 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
     setSaving(false);
   }
 
-  const initials = (user.name || user.email).slice(0, 2).toUpperCase();
+  const initials = user.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : user.email.slice(0, 2).toUpperCase();
   const memberDays = Math.floor(
-    (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24)
+    (Date.now() - new Date(user.createdAt).getTime()) / (1000 * 60 * 60 * 24),
   );
 
   return (
@@ -166,7 +233,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
                 </button>
               </div>
               <div>
-                <h2 className="text-lg font-semibold">{user.name || 'User'}</h2>
+                <h2 className="text-lg font-semibold">{user.name || "User"}</h2>
                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <span>{user.email}</span>
                   <BadgeCheck size={14} className="text-primary shrink-0" />
@@ -179,7 +246,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
               className="mt-3 sm:mt-0 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               <Pencil size={14} />
-              {editing ? 'Cancel' : 'Edit'}
+              {editing ? "Cancel" : "Edit"}
             </button>
           </div>
 
@@ -194,7 +261,7 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
             </span>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
               <CalendarDays size={12} />
-              {memberDays} member day{memberDays !== 1 ? 's' : ''}
+              {memberDays} member day{memberDays !== 1 ? "s" : ""}
             </span>
           </div>
         </div>
@@ -208,19 +275,36 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
             <form onSubmit={handleSave} className="mt-4 space-y-4 max-w-md">
               <div className="space-y-1">
                 <label className="text-sm font-medium">Full Name</label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your name"
+                />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium">Email</label>
-                <Input value={user.email} disabled className="text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
+                <Input
+                  value={user.email}
+                  disabled
+                  className="text-muted-foreground"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Email cannot be changed.
+                </p>
               </div>
               <div className="flex gap-2">
                 <Button type="submit" disabled={saving}>
                   {saved ? <Check size={16} /> : <Save size={16} />}
-                  {saved ? 'Saved' : saving ? 'Saving...' : 'Save'}
+                  {saved ? "Saved" : saving ? "Saving..." : "Save"}
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => { setEditing(false); setName(user.name ?? ''); }}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setEditing(false);
+                    setName(user.name ?? "");
+                  }}
+                >
                   Cancel
                 </Button>
               </div>
@@ -230,7 +314,9 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
               <div className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-xs text-muted-foreground">Full Name</p>
-                  <p className="text-sm font-medium">{user.name || 'Not set'}</p>
+                  <p className="text-sm font-medium">
+                    {user.name || "Not set"}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center justify-between py-3">
@@ -249,18 +335,32 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
           <div className="p-6">
             <h3 className="text-sm font-semibold">Monthly Usage</h3>
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {(['LINKS', 'QR_CODES', 'CUSTOM_DOMAINS', 'API_KEYS'] as const).map((key) => {
+              {(
+                ["LINKS", "QR_CODES", "CUSTOM_DOMAINS", "API_KEYS"] as const
+              ).map((key) => {
                 const value = usage.usage[key] ?? 0;
                 const limit = usage.limits[key];
-                const pct = limit ? Math.min(100, Math.round((value / limit) * 100)) : 0;
+                const pct = limit
+                  ? Math.min(100, Math.round((value / limit) * 100))
+                  : 0;
                 return (
-                  <div key={key} className="rounded-lg border border-border p-4">
+                  <div
+                    key={key}
+                    className="rounded-lg border border-border p-4"
+                  >
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{key.replace('_', ' ')}</span>
-                      <span>{limit == null ? `${value} / Unlimited` : `${value} / ${limit}`}</span>
+                      <span>{key.replace("_", " ")}</span>
+                      <span>
+                        {limit == null
+                          ? `${value} / Unlimited`
+                          : `${value} / ${limit}`}
+                      </span>
                     </div>
                     <div className="mt-3 h-2 rounded-full bg-muted">
-                      <div className="h-2 rounded-full bg-primary" style={{ width: limit == null ? '100%' : `${pct}%` }} />
+                      <div
+                        className="h-2 rounded-full bg-primary"
+                        style={{ width: limit == null ? "100%" : `${pct}%` }}
+                      />
                     </div>
                   </div>
                 );
@@ -370,7 +470,11 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
           <div>
             <h3 className="text-sm font-semibold">Current Plan</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              You are on the <span className="font-medium text-foreground">{user.tier.name}</span> plan.
+              You are on the{" "}
+              <span className="font-medium text-foreground">
+                {user.tier.name}
+              </span>{" "}
+              plan.
               {user.tier.maxLinks !== null && (
                 <> You can create up to {user.tier.maxLinks} links per month.</>
               )}
@@ -383,35 +487,88 @@ function ProfileSection({ user, stats, usage }: { user: UserData; stats: Stats; 
           </Button>
         </div>
       </div>
+
+      {/* Invoice History */}
+      <InvoicesSection />
+    </div>
+  );
+}
+
+function InvoicesSection() {
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/invoices", { cache: "no-store" })
+      .then((r) => r.json())
+      .then(setInvoices)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="rounded-xl border border-border bg-card shadow-sm">
+      <div className="p-6">
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <FileText size={16} /> Invoice History
+        </h3>
+        {loading ? (
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        ) : invoices.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No invoices yet.</p>
+        ) : (
+          <div className="space-y-2 text-sm">
+            {invoices.slice(0, 5).map((inv: any) => (
+              <div
+                key={inv.id}
+                className="flex justify-between border-b pb-1 last:border-0"
+              >
+                <span>
+                  {new Date(inv.issuedAt).toLocaleDateString()} —{" "}
+                  {inv.description || "Invoice"}
+                </span>
+                <span className="font-mono">
+                  ${(inv.amount / 100).toFixed(2)}{" "}
+                  <span className="text-xs">({inv.status})</span>
+                </span>
+              </div>
+            ))}
+            {invoices.length > 5 && (
+              <div className="text-xs text-muted-foreground">
+                +{invoices.length - 5} more
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
   const [keys, setKeys] = useState(initialKeys);
-  const [name, setName] = useState('');
+  const [name, setName] = useState("");
   const [secret, setSecret] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
 
   async function generate() {
     setCreating(true);
-    const res = await fetch('/api/api-keys', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: name || 'Default API key' }),
+    const res = await fetch("/api/api-keys", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: name || "Default API key" }),
     });
     if (res.ok) {
       const created = await res.json();
       setSecret(created.secret);
       setKeys((prev) => [created, ...prev]);
-      setName('');
+      setName("");
     }
     setCreating(false);
   }
 
   async function revoke(id: string) {
-    await fetch(`/api/api-keys/${id}`, { method: 'DELETE' });
+    await fetch(`/api/api-keys/${id}`, { method: "DELETE" });
     setKeys((prev) =>
       prev.map((k) =>
         k.id === id ? { ...k, revokedAt: new Date().toISOString() } : k,
@@ -421,11 +578,9 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
   }
 
   async function activate(id: string) {
-    await fetch(`/api/api-keys/${id}`, { method: 'PATCH' });
+    await fetch(`/api/api-keys/${id}`, { method: "PATCH" });
     setKeys((prev) =>
-      prev.map((k) =>
-        k.id === id ? { ...k, revokedAt: null } : k,
-      ),
+      prev.map((k) => (k.id === id ? { ...k, revokedAt: null } : k)),
     );
   }
 
@@ -464,8 +619,12 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
         {/* Secret Reveal */}
         {secret && (
           <div className="mt-4 rounded-lg border border-primary/30 bg-primary/5 p-4">
-            <p className="text-sm font-medium text-primary">Key created successfully</p>
-            <p className="text-xs text-muted-foreground">Copy this key now. You will not be able to see it again.</p>
+            <p className="text-sm font-medium text-primary">
+              Key created successfully
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Copy this key now. You will not be able to see it again.
+            </p>
             <div className="mt-2 flex items-center gap-2">
               <code className="flex-1 overflow-x-auto rounded border border-border bg-background px-3 py-2 text-xs font-mono">
                 {secret}
@@ -476,7 +635,11 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
                 className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Copy"
               >
-                {copied ? <Check size={16} className="text-green-600" /> : <Copy size={16} />}
+                {copied ? (
+                  <Check size={16} className="text-green-600" />
+                ) : (
+                  <Copy size={16} />
+                )}
               </button>
             </div>
           </div>
@@ -486,7 +649,8 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
         {keys.length > 0 && (
           <div className="mt-6 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {keys.filter((k) => !k.revokedAt).length} active key{keys.filter((k) => !k.revokedAt).length !== 1 ? 's' : ''}
+              {keys.filter((k) => !k.revokedAt).length} active key
+              {keys.filter((k) => !k.revokedAt).length !== 1 ? "s" : ""}
               {keys.some((k) => k.revokedAt) && (
                 <> · {keys.filter((k) => k.revokedAt).length} revoked</>
               )}
@@ -497,34 +661,55 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
                 <div
                   key={key.id}
                   className={cn(
-                    'flex items-center justify-between rounded-lg border px-4 py-3 text-sm',
+                    "flex items-center justify-between rounded-lg border px-4 py-3 text-sm",
                     isRevoked
-                      ? 'border-border/50 bg-muted/30'
-                      : 'border-border bg-card',
+                      ? "border-border/50 bg-muted/30"
+                      : "border-border bg-card",
                   )}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className={cn('font-medium', isRevoked && 'text-muted-foreground line-through')}>
+                      <p
+                        className={cn(
+                          "font-medium",
+                          isRevoked && "text-muted-foreground line-through",
+                        )}
+                      >
                         {key.name}
                       </p>
                       <span
                         className={cn(
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium',
+                          "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
                           isRevoked
-                            ? 'bg-muted text-muted-foreground'
-                            : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                            ? "bg-muted text-muted-foreground"
+                            : "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
                         )}
                       >
-                        {isRevoked ? 'Revoked' : 'Active'}
+                        {isRevoked ? "Revoked" : "Active"}
                       </span>
                     </div>
-                    <p className={cn('text-xs font-mono', isRevoked ? 'text-muted-foreground/50' : 'text-muted-foreground')}>
+                    <p
+                      className={cn(
+                        "text-xs font-mono",
+                        isRevoked
+                          ? "text-muted-foreground/50"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       {key.prefix}_****{key.lastFour}
                     </p>
-                    <p className={cn('text-xs mt-0.5', isRevoked ? 'text-muted-foreground/50' : 'text-muted-foreground')}>
+                    <p
+                      className={cn(
+                        "text-xs mt-0.5",
+                        isRevoked
+                          ? "text-muted-foreground/50"
+                          : "text-muted-foreground",
+                      )}
+                    >
                       Created {new Date(key.createdAt).toLocaleDateString()}
-                      {key.lastUsedAt ? ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}` : ' · Never used'}
+                      {key.lastUsedAt
+                        ? ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}`
+                        : " · Never used"}
                     </p>
                   </div>
                   {isRevoked ? (
@@ -559,145 +744,220 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
 }
 
 function ApiDocsBlock() {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://your-domain.com";
 
   return (
     <>
-    <div className="mt-6 rounded-lg bg-muted/50 p-4">
-      <h4 className="text-sm font-semibold">API Integration</h4>
-      <div className="mt-3 space-y-3 text-xs text-muted-foreground">
-        <div>
-          <p className="font-medium text-foreground">Endpoint</p>
-          <code className="mt-1 block rounded border border-border bg-background px-3 py-2 font-mono">
-            POST {origin}/api/v1/shorten
-          </code>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">Authentication</p>
-          <code className="mt-1 block rounded border border-border bg-background px-3 py-2 font-mono">
-            Authorization: Bearer phyat_live_your_key_here
-          </code>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">Example request</p>
-          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
-            curl -X POST {origin}/api/v1/shorten \<br />
-            &nbsp;&nbsp;-H &quot;Authorization: Bearer phyat_live_your_key_here&quot; \<br />
-            &nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \<br />
-            &nbsp;&nbsp;-d &#39;{`{"destination":"https://example.com","title":"Launch page","customAlias":"launch","generateQR":true}`}&#39;
-          </code>
-        </div>
-        <p>
-          The response includes <span className="font-mono">shortUrl</span>, <span className="font-mono">slug</span>, and creation metadata. Pro plans include API keys; Developer plans add higher API limits and webhooks.
-        </p>
-        <div>
-          <p className="font-medium text-foreground">Coupon validation</p>
-          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
-            POST {origin}/api/coupons/redeem<br />
-            Content-Type: application/json<br />
-            <br />
-            {`{"code":"SAVE20"}`}
-          </code>
-          <p className="mt-2">
-            Coupon codes are applied from the Plans page before checkout. The seed coupon is <span className="font-mono">SAVE20</span>.
+      <div className="mt-6 rounded-lg bg-muted/50 p-4">
+        <h4 className="text-sm font-semibold">API Integration</h4>
+        <div className="mt-3 space-y-3 text-xs text-muted-foreground">
+          <div>
+            <p className="font-medium text-foreground">Endpoint</p>
+            <code className="mt-1 block rounded border border-border bg-background px-3 py-2 font-mono">
+              POST {origin}/api/v1/shorten
+            </code>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">Authentication</p>
+            <code className="mt-1 block rounded border border-border bg-background px-3 py-2 font-mono">
+              Authorization: Bearer phyat_live_your_key_here
+            </code>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">Example request</p>
+            <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+              curl -X POST {origin}/api/v1/shorten \<br />
+              &nbsp;&nbsp;-H &quot;Authorization: Bearer
+              phyat_live_your_key_here&quot; \<br />
+              &nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \<br />
+              &nbsp;&nbsp;-d &#39;
+              {`{"destination":"https://example.com","title":"Launch page","customAlias":"launch","generateQR":true}`}
+              &#39;
+            </code>
+          </div>
+          <p>
+            The response includes <span className="font-mono">shortUrl</span>,{" "}
+            <span className="font-mono">slug</span>, and creation metadata. Pro
+            plans include API keys; Developer plans add higher API limits and
+            webhooks.
           </p>
-        </div>
-      </div>
-    </div>
-
-    <div className="mt-6 rounded-lg bg-muted/50 p-4">
-      <h4 className="text-sm font-semibold">Webhook Integration</h4>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Receive real-time HTTP callbacks for events in your account. Available on Developer plans and above.
-      </p>
-      <div className="mt-3 space-y-3 text-xs text-muted-foreground">
-        <div>
-          <p className="font-medium text-foreground">Manage webhooks</p>
-          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
-            GET    {origin}/api/webhooks          # List all webhooks<br />
-            POST   {origin}/api/webhooks          # Create a webhook<br />
-            PUT    {origin}/api/webhooks/:id      # Update a webhook<br />
-            DELETE {origin}/api/webhooks/:id      # Delete a webhook<br />
-            POST   {origin}/api/webhooks/:id/test # Send a test event
-          </code>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">Create a webhook</p>
-          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
-            curl -X POST {origin}/api/webhooks \<br />
-            &nbsp;&nbsp;-H &quot;Authorization: Bearer phyat_live_your_key_here&quot; \<br />
-            &nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \<br />
-            &nbsp;&nbsp;-d &#39;{`{"name":"My Webhook","url":"https://example.com/webhook","events":["LINK_CREATED","LINK_CLICKED"]}`}&#39;
-          </code>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">Event types</p>
-          <div className="mt-1 grid grid-cols-2 gap-1">
-            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_CREATED</code>
-            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_UPDATED</code>
-            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_DELETED</code>
-            <code className="rounded border border-border bg-background px-2 py-1 font-mono">LINK_CLICKED</code>
-            <code className="rounded border border-border bg-background px-2 py-1 font-mono">QR_CREATED</code>
-            <code className="rounded border border-border bg-background px-2 py-1 font-mono">QR_SCANNED</code>
+          <div>
+            <p className="font-medium text-foreground">Coupon validation</p>
+            <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+              POST {origin}/api/coupons/redeem
+              <br />
+              Content-Type: application/json
+              <br />
+              <br />
+              {`{"code":"SAVE20"}`}
+            </code>
+            <p className="mt-2">
+              Coupon codes are applied from the Plans page before checkout. The
+              seed coupon is <span className="font-mono">SAVE20</span>.
+            </p>
           </div>
         </div>
-        <div>
-          <p className="font-medium text-foreground">Example payload</p>
-          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
-            {`{`}<br />
-            &nbsp;&nbsp;{`"event": "LINK_CLICKED",`}<br />
-            &nbsp;&nbsp;{`"payload": {`}<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;{`"slug": "my-link",`}<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;{`"destination": "https://example.com",`}<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;{`"ip": "203.0.113.42",`}<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;{`"userAgent": "Mozilla/5.0 ...",`}<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;{`"timestamp": "2025-06-15T10:30:00.000Z"`}<br />
-            &nbsp;&nbsp;{`},`}<br />
-            &nbsp;&nbsp;{`"createdAt": "2025-06-15T10:30:00.000Z"`}<br />
-            {`}`}
-          </code>
-        </div>
-        <div>
-          <p className="font-medium text-foreground">Signature verification</p>
-          <p className="mt-1">
-            Each webhook request includes a <span className="font-mono">x-phyat-signature</span> header containing an HMAC-SHA256 signature of the request body. Verify it using your webhook secret:
-          </p>
-          <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
-            # Node.js example<br />
-            const crypto = require(&apos;crypto&apos;);<br />
-            const secret = &apos;your_webhook_secret&apos;;<br />
-            const sig =<br />
-            &nbsp;&nbsp;crypto<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;.createHmac(&apos;sha256&apos;, secret)<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;.update(requestBody)<br />
-            &nbsp;&nbsp;&nbsp;&nbsp;.digest(&apos;hex&apos;);<br />
-            const isValid = sig === headerSig;
-          </code>
+      </div>
+
+      <div className="mt-6 rounded-lg bg-muted/50 p-4">
+        <h4 className="text-sm font-semibold">Webhook Integration</h4>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Receive real-time HTTP callbacks for events in your account. Available
+          on Developer plans and above.
+        </p>
+        <div className="mt-3 space-y-3 text-xs text-muted-foreground">
+          <div>
+            <p className="font-medium text-foreground">Manage webhooks</p>
+            <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+              GET {origin}/api/webhooks # List all webhooks
+              <br />
+              POST {origin}/api/webhooks # Create a webhook
+              <br />
+              PUT {origin}/api/webhooks/:id # Update a webhook
+              <br />
+              DELETE {origin}/api/webhooks/:id # Delete a webhook
+              <br />
+              POST {origin}/api/webhooks/:id/test # Send a test event
+            </code>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">Create a webhook</p>
+            <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+              curl -X POST {origin}/api/webhooks \<br />
+              &nbsp;&nbsp;-H &quot;Authorization: Bearer
+              phyat_live_your_key_here&quot; \<br />
+              &nbsp;&nbsp;-H &quot;Content-Type: application/json&quot; \<br />
+              &nbsp;&nbsp;-d &#39;
+              {`{"name":"My Webhook","url":"https://example.com/webhook","events":["LINK_CREATED","LINK_CLICKED"]}`}
+              &#39;
+            </code>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">Event types</p>
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              <code className="rounded border border-border bg-background px-2 py-1 font-mono">
+                LINK_CREATED
+              </code>
+              <code className="rounded border border-border bg-background px-2 py-1 font-mono">
+                LINK_UPDATED
+              </code>
+              <code className="rounded border border-border bg-background px-2 py-1 font-mono">
+                LINK_DELETED
+              </code>
+              <code className="rounded border border-border bg-background px-2 py-1 font-mono">
+                LINK_CLICKED
+              </code>
+              <code className="rounded border border-border bg-background px-2 py-1 font-mono">
+                QR_CREATED
+              </code>
+              <code className="rounded border border-border bg-background px-2 py-1 font-mono">
+                QR_SCANNED
+              </code>
+            </div>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">Example payload</p>
+            <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+              {`{`}
+              <br />
+              &nbsp;&nbsp;{`"event": "LINK_CLICKED",`}
+              <br />
+              &nbsp;&nbsp;{`"payload": {`}
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;{`"slug": "my-link",`}
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;{`"destination": "https://example.com",`}
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;{`"ip": "203.0.113.42",`}
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;{`"userAgent": "Mozilla/5.0 ...",`}
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;
+              {`"timestamp": "2025-06-15T10:30:00.000Z"`}
+              <br />
+              &nbsp;&nbsp;{`},`}
+              <br />
+              &nbsp;&nbsp;{`"createdAt": "2025-06-15T10:30:00.000Z"`}
+              <br />
+              {`}`}
+            </code>
+          </div>
+          <div>
+            <p className="font-medium text-foreground">
+              Signature verification
+            </p>
+            <p className="mt-1">
+              Each webhook request includes a{" "}
+              <span className="font-mono">x-phyat-signature</span> header
+              containing an HMAC-SHA256 signature of the request body. Verify it
+              using your webhook secret:
+            </p>
+            <code className="mt-1 block overflow-x-auto rounded border border-border bg-background px-3 py-2 font-mono leading-5">
+              # Node.js example
+              <br />
+              const crypto = require(&apos;crypto&apos;);
+              <br />
+              const secret = &apos;your_webhook_secret&apos;;
+              <br />
+              const sig =<br />
+              &nbsp;&nbsp;crypto
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;.createHmac(&apos;sha256&apos;, secret)
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;.update(requestBody)
+              <br />
+              &nbsp;&nbsp;&nbsp;&nbsp;.digest(&apos;hex&apos;);
+              <br />
+              const isValid = sig === headerSig;
+            </code>
+          </div>
         </div>
       </div>
-    </div>
     </>
   );
 }
 
 function NotificationsSection() {
   const [prefs, setPrefs] = useState(() => {
-    if (typeof window === 'undefined') return defaultPrefs;
-    const saved = localStorage.getItem('phyat_notification_prefs');
+    if (typeof window === "undefined") return defaultPrefs;
+    const saved = localStorage.getItem("phyat_notification_prefs");
     return saved ? JSON.parse(saved) : defaultPrefs;
   });
 
-  const toggles: { key: keyof typeof defaultPrefs; label: string; desc: string }[] = [
-    { key: 'clicks', label: 'Click alerts', desc: 'Get notified when your links receive clicks' },
-    { key: 'weekly', label: 'Weekly digest', desc: 'Receive a weekly summary of your link performance' },
-    { key: 'security', label: 'Security alerts', desc: 'Important security notifications about your account' },
-    { key: 'updates', label: 'Product updates', desc: 'New features, improvements, and tips' },
+  const toggles: {
+    key: keyof typeof defaultPrefs;
+    label: string;
+    desc: string;
+  }[] = [
+    {
+      key: "clicks",
+      label: "Click alerts",
+      desc: "Get notified when your links receive clicks",
+    },
+    {
+      key: "weekly",
+      label: "Weekly digest",
+      desc: "Receive a weekly summary of your link performance",
+    },
+    {
+      key: "security",
+      label: "Security alerts",
+      desc: "Important security notifications about your account",
+    },
+    {
+      key: "updates",
+      label: "Product updates",
+      desc: "New features, improvements, and tips",
+    },
   ];
 
   function toggle(key: keyof typeof defaultPrefs) {
     const next = { ...prefs, [key]: !prefs[key] };
     setPrefs(next);
-    localStorage.setItem('phyat_notification_prefs', JSON.stringify(next));
+    localStorage.setItem("phyat_notification_prefs", JSON.stringify(next));
   }
 
   return (
@@ -722,12 +982,12 @@ function NotificationsSection() {
               </div>
               <div
                 className={`relative h-5 w-9 rounded-full transition-colors ${
-                  prefs[key] ? 'bg-primary' : 'bg-muted-foreground/30'
+                  prefs[key] ? "bg-primary" : "bg-muted-foreground/30"
                 }`}
               >
                 <div
                   className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
-                    prefs[key] ? 'translate-x-[18px]' : 'translate-x-0.5'
+                    prefs[key] ? "translate-x-[18px]" : "translate-x-0.5"
                   }`}
                 />
                 <input
@@ -753,25 +1013,25 @@ const defaultPrefs = {
 };
 
 function SecuritySection({ user }: { user: UserData }) {
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswords, setShowPasswords] = useState(false);
   const [changing, setChanging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const [twofaSecret, setTwofaSecret] = useState('');
-  const [twofaOtpauthUrl, setTwofaOtpauthUrl] = useState('');
-  const [twofaQrDataUrl, setTwofaQrDataUrl] = useState('');
-  const [twofaToken, setTwofaToken] = useState('');
-  const [twofaError, setTwofaError] = useState('');
+  const [twofaSecret, setTwofaSecret] = useState("");
+  const [twofaOtpauthUrl, setTwofaOtpauthUrl] = useState("");
+  const [twofaQrDataUrl, setTwofaQrDataUrl] = useState("");
+  const [twofaToken, setTwofaToken] = useState("");
+  const [twofaError, setTwofaError] = useState("");
   const [twofaLoading, setTwofaLoading] = useState(false);
   const [twofaEnabled, setTwofaEnabled] = useState(user.user2faEnabled);
   const [twofaSetupMode, setTwofaSetupMode] = useState(false);
-  const [twofaDisablePassword, setTwofaDisablePassword] = useState('');
-  const [twofaDisableToken, setTwofaDisableToken] = useState('');
-  const [twofaDisableError, setTwofaDisableError] = useState('');
+  const [twofaDisablePassword, setTwofaDisablePassword] = useState("");
+  const [twofaDisableToken, setTwofaDisableToken] = useState("");
+  const [twofaDisableError, setTwofaDisableError] = useState("");
   const [twofaDisabling, setTwofaDisabling] = useState(false);
 
   async function handleChangePassword(e: React.FormEvent) {
@@ -780,99 +1040,106 @@ function SecuritySection({ user }: { user: UserData }) {
     setSuccess(false);
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError("Passwords do not match.");
       return;
     }
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters.');
+      setError("Password must be at least 8 characters.");
       return;
     }
 
     setChanging(true);
-    const res = await fetch('/api/auth/change-password', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
+    const res = await fetch("/api/auth/change-password", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword }),
     });
     if (res.ok) {
       setSuccess(true);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } else {
       const data = await res.json();
-      setError(data.message || 'Failed to change password.');
+      setError(data.message || "Failed to change password.");
     }
     setChanging(false);
   }
 
   async function start2faSetup() {
-    setTwofaError('');
+    setTwofaError("");
     setTwofaSetupMode(true);
     try {
-      const res = await fetch('/api/auth/2fa/setup');
+      const res = await fetch("/api/auth/2fa/setup");
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Failed to start setup');
+        throw new Error(data.message || "Failed to start setup");
       }
       const data = await res.json();
       setTwofaSecret(data.secret);
       setTwofaOtpauthUrl(data.otpauthUrl);
-      const QRCode = await import('qrcode');
-      const url = await QRCode.toDataURL(data.otpauthUrl, { width: 200, margin: 2 });
+      const QRCode = await import("qrcode");
+      const url = await QRCode.toDataURL(data.otpauthUrl, {
+        width: 200,
+        margin: 2,
+      });
       setTwofaQrDataUrl(url);
     } catch (err) {
-      setTwofaError(err instanceof Error ? err.message : 'Failed to start setup');
+      setTwofaError(
+        err instanceof Error ? err.message : "Failed to start setup",
+      );
     }
   }
 
   async function verify2faSetup() {
-    setTwofaError('');
+    setTwofaError("");
     setTwofaLoading(true);
     try {
-      const res = await fetch('/api/auth/2fa/verify-setup', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
+      const res = await fetch("/api/auth/2fa/verify-setup", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ token: twofaToken }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Invalid code');
+        throw new Error(data.message || "Invalid code");
       }
       setTwofaEnabled(true);
       setTwofaSetupMode(false);
-      setTwofaToken('');
+      setTwofaToken("");
     } catch (err) {
-      setTwofaError(err instanceof Error ? err.message : 'Verification failed');
+      setTwofaError(err instanceof Error ? err.message : "Verification failed");
     } finally {
       setTwofaLoading(false);
     }
   }
 
   async function disable2fa() {
-    setTwofaDisableError('');
+    setTwofaDisableError("");
     setTwofaDisabling(true);
     try {
       const body = user.hasPassword
         ? { password: twofaDisablePassword }
         : { token: twofaDisableToken };
-      const res = await fetch('/api/auth/2fa/disable', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
+      const res = await fetch("/api/auth/2fa/disable", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || 'Failed to disable 2FA');
+        throw new Error(data.message || "Failed to disable 2FA");
       }
       setTwofaEnabled(false);
-      setTwofaDisablePassword('');
-      setTwofaDisableToken('');
-      setTwofaSecret('');
-      setTwofaOtpauthUrl('');
-      setTwofaQrDataUrl('');
+      setTwofaDisablePassword("");
+      setTwofaDisableToken("");
+      setTwofaSecret("");
+      setTwofaOtpauthUrl("");
+      setTwofaQrDataUrl("");
     } catch (err) {
-      setTwofaDisableError(err instanceof Error ? err.message : 'Failed to disable');
+      setTwofaDisableError(
+        err instanceof Error ? err.message : "Failed to disable",
+      );
     } finally {
       setTwofaDisabling(false);
     }
@@ -887,12 +1154,15 @@ function SecuritySection({ user }: { user: UserData }) {
             <Shield size={18} className="text-muted-foreground" />
             <h2 className="text-lg font-semibold">Change Password</h2>
           </div>
-          <form onSubmit={handleChangePassword} className="mt-5 max-w-md space-y-4">
+          <form
+            onSubmit={handleChangePassword}
+            className="mt-5 max-w-md space-y-4"
+          >
             <div className="space-y-1">
               <label className="text-sm font-medium">Current password</label>
               <div className="relative">
                 <Input
-                  type={showPasswords ? 'text' : 'password'}
+                  type={showPasswords ? "text" : "password"}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   required
@@ -903,7 +1173,7 @@ function SecuritySection({ user }: { user: UserData }) {
               <label className="text-sm font-medium">New password</label>
               <div className="relative">
                 <Input
-                  type={showPasswords ? 'text' : 'password'}
+                  type={showPasswords ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   required
@@ -912,10 +1182,12 @@ function SecuritySection({ user }: { user: UserData }) {
               </div>
             </div>
             <div className="space-y-1">
-              <label className="text-sm font-medium">Confirm new password</label>
+              <label className="text-sm font-medium">
+                Confirm new password
+              </label>
               <div className="relative">
                 <Input
-                  type={showPasswords ? 'text' : 'password'}
+                  type={showPasswords ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
@@ -934,10 +1206,14 @@ function SecuritySection({ user }: { user: UserData }) {
               Show passwords
             </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && <p className="text-sm text-green-600">Password changed successfully.</p>}
+            {success && (
+              <p className="text-sm text-green-600">
+                Password changed successfully.
+              </p>
+            )}
             <Button type="submit" disabled={changing}>
               <Shield size={16} />
-              {changing ? 'Changing...' : 'Change Password'}
+              {changing ? "Changing..." : "Change Password"}
             </Button>
           </form>
         </div>
@@ -950,18 +1226,26 @@ function SecuritySection({ user }: { user: UserData }) {
             <Shield size={18} className="text-muted-foreground" />
             <h2 className="text-lg font-semibold">Two-Factor Authentication</h2>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add an extra layer of security to your account.
+          </p>
 
           {twofaEnabled && !twofaSetupMode ? (
             <div className="mt-4">
               <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20 px-4 py-3">
-                <p className="text-sm font-medium text-green-700 dark:text-green-400">Two-factor authentication is enabled</p>
-                <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">Your account is protected with an authenticator app.</p>
+                <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                  Two-factor authentication is enabled
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">
+                  Your account is protected with an authenticator app.
+                </p>
               </div>
               <div className="mt-4 max-w-sm space-y-3">
                 {user.hasPassword ? (
                   <>
-                    <label className="text-sm font-medium">Enter your password to disable 2FA</label>
+                    <label className="text-sm font-medium">
+                      Enter your password to disable 2FA
+                    </label>
                     <Input
                       type="password"
                       value={twofaDisablePassword}
@@ -971,21 +1255,33 @@ function SecuritySection({ user }: { user: UserData }) {
                   </>
                 ) : (
                   <>
-                    <label className="text-sm font-medium">Enter your authenticator code to disable 2FA</label>
+                    <label className="text-sm font-medium">
+                      Enter your authenticator code to disable 2FA
+                    </label>
                     <Input
                       value={twofaDisableToken}
-                      onChange={(e) => setTwofaDisableToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onChange={(e) =>
+                        setTwofaDisableToken(
+                          e.target.value.replace(/\D/g, "").slice(0, 6),
+                        )
+                      }
                       placeholder="000000"
                       className="text-center text-lg tracking-widest font-mono"
                       maxLength={6}
                     />
                   </>
                 )}
-                {twofaDisableError && <p className="text-sm text-red-600">{twofaDisableError}</p>}
+                {twofaDisableError && (
+                  <p className="text-sm text-red-600">{twofaDisableError}</p>
+                )}
                 <Button
                   variant="destructive"
                   onClick={disable2fa}
-                  disabled={user.hasPassword ? !twofaDisablePassword || twofaDisabling : twofaDisableToken.length !== 6 || twofaDisabling}
+                  disabled={
+                    user.hasPassword
+                      ? !twofaDisablePassword || twofaDisabling
+                      : twofaDisableToken.length !== 6 || twofaDisabling
+                  }
                 >
                   Disable 2FA
                 </Button>
@@ -994,35 +1290,62 @@ function SecuritySection({ user }: { user: UserData }) {
           ) : twofaSetupMode ? (
             <div className="mt-4 max-w-sm space-y-4">
               <p className="text-sm text-muted-foreground">
-                Scan the QR code with <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong>, then enter the 6-digit code below.
+                Scan the QR code with <strong>Google Authenticator</strong> or{" "}
+                <strong>Microsoft Authenticator</strong>, then enter the 6-digit
+                code below.
               </p>
               {twofaQrDataUrl && (
                 <div className="flex justify-center">
                   <div className="rounded-xl border border-border bg-white p-3">
-                    <Image src={twofaQrDataUrl} alt="2FA QR Code" width={180} height={180} unoptimized />
+                    <Image
+                      src={twofaQrDataUrl}
+                      alt="2FA QR Code"
+                      width={180}
+                      height={180}
+                      unoptimized
+                    />
                   </div>
                 </div>
               )}
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
-                <p className="text-xs font-medium text-muted-foreground mb-1">Or enter this key manually</p>
-                <p className="font-mono text-sm tracking-wider select-all break-all">{twofaSecret}</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  Or enter this key manually
+                </p>
+                <p className="font-mono text-sm tracking-wider select-all break-all">
+                  {twofaSecret}
+                </p>
               </div>
               <div>
-                <label className="text-sm font-medium mb-1.5 block">Authentication Code</label>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Authentication Code
+                </label>
                 <Input
                   value={twofaToken}
-                  onChange={(e) => setTwofaToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  onChange={(e) =>
+                    setTwofaToken(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
                   placeholder="000000"
                   className="text-center text-lg tracking-widest font-mono"
                   maxLength={6}
                 />
               </div>
-              {twofaError && <p className="text-sm text-red-600">{twofaError}</p>}
+              {twofaError && (
+                <p className="text-sm text-red-600">{twofaError}</p>
+              )}
               <div className="flex gap-2">
-                <Button onClick={verify2faSetup} disabled={twofaToken.length !== 6 || twofaLoading}>
+                <Button
+                  onClick={verify2faSetup}
+                  disabled={twofaToken.length !== 6 || twofaLoading}
+                >
                   Verify & Enable
                 </Button>
-                <Button variant="secondary" onClick={() => { setTwofaSetupMode(false); setTwofaError(''); }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setTwofaSetupMode(false);
+                    setTwofaError("");
+                  }}
+                >
                   Cancel
                 </Button>
               </div>

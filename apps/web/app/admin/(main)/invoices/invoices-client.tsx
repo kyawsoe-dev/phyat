@@ -1,0 +1,228 @@
+'use client';
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+type Invoice = {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  description?: string | null;
+  status: 'PAID' | 'UNPAID' | 'CANCELLED' | 'REFUNDED';
+  issuedAt: string;
+  paidAt?: string | null;
+  user?: { id: string; email: string; name?: string | null };
+};
+
+type InvoicesData = {
+  invoices: Invoice[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+};
+
+export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData }) {
+  const [data, setData] = useState(initialData);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({ userId: '', amount: 0, description: '' });
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ amount: 0, status: 'UNPAID', paidAt: '' });
+
+  async function loadPage(page: number, s?: string, st?: string) {
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), limit: '20' });
+    if (s) params.set('search', s);
+    if (st) params.set('status', st);
+    try {
+      const res = await fetch(`/api/admin/invoices?${params}`);
+      const result = await res.json();
+      setData(result);
+    } catch {}
+    setLoading(false);
+  }
+
+  async function createInvoice(e: React.FormEvent) {
+    e.preventDefault();
+    if (!createForm.userId || !createForm.amount) return alert('User ID and amount required');
+    try {
+      await fetch('/api/admin/invoices', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId: createForm.userId,
+          amount: Number(createForm.amount),
+          description: createForm.description || undefined,
+        }),
+      });
+      setShowCreate(false);
+      setCreateForm({ userId: '', amount: 0, description: '' });
+      loadPage(1, search, statusFilter || undefined);
+    } catch {
+      alert('Create failed');
+    }
+  }
+
+  function startEdit(inv: Invoice) {
+    setEditId(inv.id);
+    setEditForm({
+      amount: inv.amount,
+      status: inv.status,
+      paidAt: inv.paidAt ? inv.paidAt.substring(0, 10) : '',
+    });
+  }
+
+  async function saveEdit() {
+    if (!editId) return;
+    try {
+      await fetch(`/api/admin/invoices/${editId}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          amount: Number(editForm.amount),
+          status: editForm.status,
+          paidAt: editForm.paidAt ? new Date(editForm.paidAt).toISOString() : null,
+        }),
+      });
+      setEditId(null);
+      loadPage(data.page, search, statusFilter || undefined);
+    } catch {
+      alert('Update failed');
+    }
+  }
+
+  async function deleteInvoice(id: string) {
+    if (!confirm('Delete this invoice?')) return;
+    try {
+      await fetch(`/api/admin/invoices/${id}`, { method: 'DELETE' });
+      loadPage(data.page, search, statusFilter || undefined);
+    } catch {
+      alert('Delete failed');
+    }
+  }
+
+  async function quickMarkPaid(id: string) {
+    try {
+      await fetch(`/api/admin/invoices/${id}`, {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ status: 'PAID', paidAt: new Date().toISOString() }),
+      });
+      loadPage(data.page, search, statusFilter || undefined);
+    } catch {
+      alert('Failed');
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold">Invoices</h1>
+          <p className="text-muted-foreground">Manage manual invoices and billing records</p>
+        </div>
+        <Button onClick={() => setShowCreate(true)}>+ New Invoice</Button>
+      </div>
+
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowCreate(false)}>
+          <div className="bg-card border rounded-lg p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold mb-4">Create Invoice</h3>
+            <form onSubmit={createInvoice} className="space-y-3">
+              <Input placeholder="User ID (cuid)" value={createForm.userId} onChange={e => setCreateForm({ ...createForm, userId: e.target.value })} required />
+              <Input type="number" placeholder="Amount in cents (e.g. 2900)" value={createForm.amount} onChange={e => setCreateForm({ ...createForm, amount: Number(e.target.value) })} required />
+              <Input placeholder="Description (optional)" value={createForm.description} onChange={e => setCreateForm({ ...createForm, description: e.target.value })} />
+              <div className="flex gap-2 pt-2">
+                <Button type="submit">Create</Button>
+                <Button type="button" variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          placeholder="Search by user email..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') loadPage(1, search, statusFilter || undefined); }}
+          className="max-w-xs"
+        />
+        <Button onClick={() => loadPage(1, search, statusFilter || undefined)} disabled={loading}>Search</Button>
+        {['', 'PAID', 'UNPAID', 'CANCELLED', 'REFUNDED'].map((s) => (
+          <Button key={s} variant={statusFilter === s ? 'secondary' : 'ghost'} size="sm" onClick={() => { setStatusFilter(s); loadPage(1, search, s || undefined); }}>
+            {s || 'All'}
+          </Button>
+        ))}
+      </div>
+
+      <div className="rounded-lg border bg-card overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="p-3 text-left">User</th>
+              <th className="p-3 text-left">Amount</th>
+              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Description</th>
+              <th className="p-3 text-left">Issued</th>
+              <th className="p-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.invoices.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No invoices.</td></tr>}
+            {data.invoices.map((inv) => (
+              <tr key={inv.id} className="border-t">
+                <td className="p-3 text-xs">{inv.user?.email || inv.userId}</td>
+                <td className="p-3 font-mono">${(inv.amount / 100).toFixed(2)}</td>
+                <td className="p-3">
+                  <span className={`px-2 py-px rounded text-[10px] ${inv.status === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{inv.status}</span>
+                </td>
+                <td className="p-3 text-xs truncate max-w-[180px]">{inv.description || '—'}</td>
+                <td className="p-3 text-xs">{new Date(inv.issuedAt).toLocaleDateString()}</td>
+                <td className="p-3 text-right space-x-1">
+                  {inv.status !== 'PAID' && <Button size="sm" variant="secondary" onClick={() => quickMarkPaid(inv.id)}>Mark Paid</Button>}
+                  <Button size="sm" variant="secondary" onClick={() => startEdit(inv)}>Edit</Button>
+                  <Button size="sm" variant="destructive" onClick={() => deleteInvoice(inv.id)}>Delete</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Edit modal */}
+      {editId && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setEditId(null)}>
+          <div className="bg-card p-6 border rounded w-full max-w-sm" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-medium mb-3">Edit Invoice</h3>
+            <div className="space-y-3">
+              <Input type="number" value={editForm.amount} onChange={e => setEditForm({ ...editForm, amount: Number(e.target.value) })} />
+              <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value as any })} className="w-full border rounded p-2 bg-background">
+                {['UNPAID','PAID','CANCELLED','REFUNDED'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <Input type="date" value={editForm.paidAt} onChange={e => setEditForm({ ...editForm, paidAt: e.target.value })} />
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button onClick={saveEdit}>Save</Button>
+              <Button variant="secondary" onClick={() => setEditId(null)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="text-sm flex justify-between text-muted-foreground">
+        <span>Page {data.page} / {data.totalPages} • Total {data.total}</span>
+        <div>
+          <Button size="sm" variant="secondary" disabled={data.page <= 1} onClick={() => loadPage(data.page - 1, search, statusFilter || undefined)}>←</Button>
+          <Button size="sm" variant="secondary" disabled={data.page >= data.totalPages} onClick={() => loadPage(data.page + 1, search, statusFilter || undefined)} className="ml-1">→</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
