@@ -53,4 +53,39 @@ export class AuthController {
   changePassword(@CurrentUser() user: AuthenticatedUser, @Body() input: ChangePasswordDto) {
     return this.auth.changePassword(user.id, input);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('2fa/setup')
+  @ApiOperation({ summary: 'Get 2FA setup data' })
+  get2faSetup(@CurrentUser() user: AuthenticatedUser) {
+    return this.auth.generateUser2faSecret(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/verify-setup')
+  @ApiOperation({ summary: 'Verify 2FA setup token' })
+  verify2faSetup(@CurrentUser() user: AuthenticatedUser, @Body('token') token: string) {
+    return this.auth.verifyUser2faSetup(user.id, token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/disable')
+  @ApiOperation({ summary: 'Disable 2FA' })
+  disable2fa(@CurrentUser() user: AuthenticatedUser, @Body('password') password: string) {
+    return this.auth.disableUser2fa(user.id, password);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('2fa/status')
+  @ApiOperation({ summary: 'Get 2FA status' })
+  get2faStatus(@CurrentUser() user: AuthenticatedUser) {
+    return this.auth.getUser2faStatus(user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/verify-login')
+  @ApiOperation({ summary: 'Verify 2FA code during login' })
+  verifyLogin2fa(@CurrentUser() user: AuthenticatedUser, @Body('totp') totp: string) {
+    return this.auth.verifyLogin2fa(user.id, totp);
+  }
 }

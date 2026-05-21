@@ -65,6 +65,7 @@ export default async function SettingsPage() {
         email: user.email,
         name: user.name ?? null,
         createdAt: user.createdAt,
+        user2faEnabled: Boolean((user as any).user2faEnabled),
         tier: {
           code: user.tier.code,
           name: user.tier.name,

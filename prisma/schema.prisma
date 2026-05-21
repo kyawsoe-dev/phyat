@@ -80,6 +80,8 @@ model User {
   isAdmin      Boolean  @default(false) @map("is_admin")
   admin2faSecret String? @map("admin_2fa_secret")
   admin2faEnabled Boolean @default(false) @map("admin_2fa_enabled")
+  user2faSecret  String? @map("user_2fa_secret")
+  user2faEnabled Boolean @default(false) @map("user_2fa_enabled")
   tierId       String   @map("tier_id")
   tier         Tier     @relation(fields: [tierId], references: [id], onDelete: Restrict)
   links        Link[]

@@ -13,3 +13,15 @@ export async function DELETE(
   const data = await response.json();
   return NextResponse.json(data, { status: response.status });
 }
+
+export async function PATCH(
+  _request: NextRequest,
+  { params }: { params: { id: string } },
+) {
+  const response = await fetch(`${apiBaseUrl}/api-keys/${params.id}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+  });
+  const data = await response.json();
+  return NextResponse.json(data, { status: response.status });
+}

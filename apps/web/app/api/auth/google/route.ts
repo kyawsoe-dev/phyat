@@ -16,8 +16,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: error.message ?? 'Unable to sign in with Google.' }, { status: response.status });
   }
 
-  const session = (await response.json()) as { accessToken: string };
-  setToken(session.accessToken);
+  const session = await response.json();
+  if (session.requires2fa) {
+    return NextResponse.json({ requires2fa: true, tempToken: session.accessToken });
+  }
+
+  setToken(session.accessToken as string);
 
   return NextResponse.json({ ok: true });
 }

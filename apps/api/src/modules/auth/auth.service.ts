@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { TierCode } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import * as speakeasy from 'speakeasy';
 import { createPublicKey, createVerify, type JsonWebKey as CryptoJsonWebKey } from 'crypto';
 import { PrismaService } from '../../common/prisma.service';
 import { TIER_SELECT, TierCapabilities } from '../subscriptions/application/tier-capability.service';
@@ -52,20 +53,34 @@ export class AuthService {
       select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
-    return this.session(user);
+    return this.fullSession(user);
+  }
+
+  private async fullSession(user: { id: string; email: string; name: string | null; tier: TierCapabilities }) {
+    const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email }, { expiresIn: '7d' });
+    return { accessToken, user: { id: user.id, email: user.email, name: user.name, tier: user.tier } };
+  }
+
+  private async tempSession(user: { id: string; email: string; name: string | null }) {
+    const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email }, { expiresIn: '5m' });
+    return { accessToken, requires2fa: true, user: { id: user.id, email: user.email, name: user.name } };
   }
 
   async login(input: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
-      select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
+      select: { id: true, email: true, name: true, user2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     if (!user || !user.passwordHash || !(await bcrypt.compare(input.password, user.passwordHash))) {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    return this.session(user);
+    if (user.user2faEnabled) {
+      return this.tempSession(user);
+    }
+
+    return this.fullSession(user);
   }
 
   async googleLogin(input: GoogleLoginDto) {
@@ -76,7 +91,7 @@ export class AuthService {
       where: {
         OR: [{ googleId: profile.sub }, { email: profile.email }],
       },
-      select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, googleId: true, tier: { select: TIER_SELECT } },
+      select: { id: true, email: true, name: true, user2faEnabled: true, createdAt: true, passwordHash: true, googleId: true, tier: { select: TIER_SELECT } },
     });
 
     const user = existing
@@ -87,7 +102,7 @@ export class AuthService {
             googleId: existing.googleId ?? profile.sub,
             name: existing.name ?? profile.name,
           },
-          select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
+          select: { id: true, email: true, name: true, user2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
         })
       : await this.prisma.user.create({
           data: {
@@ -96,16 +111,20 @@ export class AuthService {
             googleId: profile.sub,
             tierId: freeTier.id,
           },
-          select: { id: true, email: true, name: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
+          select: { id: true, email: true, name: true, user2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
         });
 
-    return this.session(user);
+    if (user.user2faEnabled) {
+      return this.tempSession(user);
+    }
+
+    return this.fullSession(user);
   }
 
   async me(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { id: true, email: true, name: true, isAdmin: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
+      select: { id: true, email: true, name: true, isAdmin: true, user2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     return {
@@ -113,6 +132,7 @@ export class AuthService {
       email: user.email,
       name: user.name,
       isAdmin: user.isAdmin,
+      user2faEnabled: user.user2faEnabled,
       createdAt: user.createdAt,
       tier: user.tier,
     };
@@ -124,6 +144,97 @@ export class AuthService {
       data: { name: input.name },
       select: { id: true, email: true, name: true, createdAt: true },
     });
+  }
+
+  async getUser2faStatus(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { user2faEnabled: true },
+    });
+    return { enabled: user.user2faEnabled };
+  }
+
+  async generateUser2faSecret(userId: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { email: true, user2faEnabled: true },
+    });
+
+    if (user.user2faEnabled) {
+      throw new UnauthorizedException('2FA is already enabled.');
+    }
+
+    const secret = speakeasy.generateSecret({
+      name: `Phyat (${user.email})`,
+      issuer: 'Phyat',
+      length: 20,
+      otpauth_url: true,
+    } as speakeasy.GenerateSecretWithOtpAuthUrlOptions);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { user2faSecret: secret.base32 },
+    });
+
+    return {
+      secret: secret.base32,
+      otpauthUrl: secret.otpauth_url,
+    };
+  }
+
+  async verifyUser2faSetup(userId: string, token: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { user2faSecret: true, user2faEnabled: true },
+    });
+
+    if (!user.user2faSecret) {
+      throw new UnauthorizedException('2FA setup not initiated.');
+    }
+
+    if (user.user2faEnabled) {
+      throw new UnauthorizedException('2FA is already enabled.');
+    }
+
+    const normalizedToken = token.replace(/\D/g, '').slice(0, 6);
+    const isValid = speakeasy.totp.verify({
+      secret: user.user2faSecret,
+      encoding: 'base32',
+      token: normalizedToken,
+      window: 2,
+    });
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid authentication code.');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { user2faEnabled: true },
+    });
+
+    return { success: true };
+  }
+
+  async disableUser2fa(userId: string, password: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+    });
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedException('Password sign-in is not enabled for this account.');
+    }
+
+    if (!(await bcrypt.compare(password, user.passwordHash))) {
+      throw new UnauthorizedException('Current password is incorrect.');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { user2faSecret: null, user2faEnabled: false },
+    });
+
+    return { success: true };
   }
 
   async changePassword(userId: string, input: ChangePasswordDto) {
@@ -147,18 +258,30 @@ export class AuthService {
     return { success: true };
   }
 
-  private async session(user: { id: string; email: string; name: string | null; tier: TierCapabilities }) {
-    const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email });
+  async verifyLogin2fa(userId: string, totp: string) {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { user2faSecret: true, user2faEnabled: true },
+    });
 
-    return {
-      accessToken,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        tier: user.tier,
-      },
-    };
+    if (!user.user2faEnabled || !user.user2faSecret) {
+      throw new UnauthorizedException('2FA is not enabled for this account.');
+    }
+
+    const normalizedToken = totp.replace(/\D/g, '').slice(0, 6);
+    const isValid = speakeasy.totp.verify({
+      secret: user.user2faSecret,
+      encoding: 'base32',
+      token: normalizedToken,
+      window: 2,
+    });
+
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid verification code.');
+    }
+
+    const accessToken = await this.jwt.signAsync({ sub: userId, email: '' }, { expiresIn: '7d' });
+    return { accessToken };
   }
 
   private ensureTier(code: TierCode, name: string, maxLinks: number | null) {

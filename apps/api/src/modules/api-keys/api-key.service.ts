@@ -49,6 +49,13 @@ export class ApiKeyService {
     });
   }
 
+  async activate(id: string, userId: string) {
+    return this.prisma.apiKey.updateMany({
+      where: { id, userId },
+      data: { revokedAt: null },
+    });
+  }
+
   list(userId: string) {
     return this.prisma.apiKey.findMany({
       where: { userId },

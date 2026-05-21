@@ -5,8 +5,9 @@ import {
   User, KeyRound, Bell, Shield, Code2, Eye, EyeOff,
   Copy, Check, Trash2, Plus, ExternalLink, Save, Pencil,
   Link2, QrCode, Megaphone, Globe2, BarChart3, ArrowRight, BadgeCheck,
-  CalendarDays, LayoutDashboard, CreditCard,
+  CalendarDays, LayoutDashboard, CreditCard, RefreshCw,
 } from 'lucide-react';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -16,6 +17,7 @@ type UserData = {
   email: string;
   name: string | null;
   createdAt: string;
+  user2faEnabled: boolean;
   tier: { code: string; name: string; maxLinks: number | null; apiAccess: boolean };
 };
 
@@ -417,6 +419,15 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
     setSecret(null);
   }
 
+  async function activate(id: string) {
+    await fetch(`/api/api-keys/${id}`, { method: 'PATCH' });
+    setKeys((prev) =>
+      prev.map((k) =>
+        k.id === id ? { ...k, revokedAt: null } : k,
+      ),
+    );
+  }
+
   function copySecret() {
     if (secret) {
       navigator.clipboard.writeText(secret);
@@ -515,7 +526,16 @@ function DeveloperApiSection({ initialKeys }: { initialKeys: ApiKey[] }) {
                       {key.lastUsedAt ? ` · Last used ${new Date(key.lastUsedAt).toLocaleDateString()}` : ' · Never used'}
                     </p>
                   </div>
-                  {!isRevoked && (
+                  {isRevoked ? (
+                    <button
+                      type="button"
+                      onClick={() => activate(key.id)}
+                      className="rounded-lg p-2 text-muted-foreground hover:text-green-600 hover:bg-muted transition-colors shrink-0 ml-2"
+                      title="Activate key"
+                    >
+                      <RefreshCw size={14} />
+                    </button>
+                  ) : (
                     <button
                       type="button"
                       onClick={() => revoke(key.id)}
@@ -740,6 +760,18 @@ function SecuritySection({ user }: { user: UserData }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const [twofaSecret, setTwofaSecret] = useState('');
+  const [twofaOtpauthUrl, setTwofaOtpauthUrl] = useState('');
+  const [twofaQrDataUrl, setTwofaQrDataUrl] = useState('');
+  const [twofaToken, setTwofaToken] = useState('');
+  const [twofaError, setTwofaError] = useState('');
+  const [twofaLoading, setTwofaLoading] = useState(false);
+  const [twofaEnabled, setTwofaEnabled] = useState(user.user2faEnabled);
+  const [twofaSetupMode, setTwofaSetupMode] = useState(false);
+  const [twofaDisablePassword, setTwofaDisablePassword] = useState('');
+  const [twofaDisableError, setTwofaDisableError] = useState('');
+  const [twofaDisabling, setTwofaDisabling] = useState(false);
+
   async function handleChangePassword(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -770,6 +802,74 @@ function SecuritySection({ user }: { user: UserData }) {
       setError(data.message || 'Failed to change password.');
     }
     setChanging(false);
+  }
+
+  async function start2faSetup() {
+    setTwofaError('');
+    setTwofaSetupMode(true);
+    try {
+      const res = await fetch('/api/auth/2fa/setup');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to start setup');
+      }
+      const data = await res.json();
+      setTwofaSecret(data.secret);
+      setTwofaOtpauthUrl(data.otpauthUrl);
+      const QRCode = await import('qrcode');
+      const url = await QRCode.toDataURL(data.otpauthUrl, { width: 200, margin: 2 });
+      setTwofaQrDataUrl(url);
+    } catch (err) {
+      setTwofaError(err instanceof Error ? err.message : 'Failed to start setup');
+    }
+  }
+
+  async function verify2faSetup() {
+    setTwofaError('');
+    setTwofaLoading(true);
+    try {
+      const res = await fetch('/api/auth/2fa/verify-setup', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token: twofaToken }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Invalid code');
+      }
+      setTwofaEnabled(true);
+      setTwofaSetupMode(false);
+      setTwofaToken('');
+    } catch (err) {
+      setTwofaError(err instanceof Error ? err.message : 'Verification failed');
+    } finally {
+      setTwofaLoading(false);
+    }
+  }
+
+  async function disable2fa() {
+    setTwofaDisableError('');
+    setTwofaDisabling(true);
+    try {
+      const res = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ password: twofaDisablePassword }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.message || 'Failed to disable 2FA');
+      }
+      setTwofaEnabled(false);
+      setTwofaDisablePassword('');
+      setTwofaSecret('');
+      setTwofaOtpauthUrl('');
+      setTwofaQrDataUrl('');
+    } catch (err) {
+      setTwofaDisableError(err instanceof Error ? err.message : 'Failed to disable');
+    } finally {
+      setTwofaDisabling(false);
+    }
   }
 
   return (
@@ -837,33 +937,82 @@ function SecuritySection({ user }: { user: UserData }) {
         </div>
       </div>
 
-      {/* Account Info */}
+      {/* Two-Factor Authentication */}
       <div className="rounded-xl border border-border bg-card shadow-sm">
         <div className="p-6">
-          <h3 className="text-sm font-semibold">Account Security</h3>
-          <div className="mt-4 space-y-3 text-sm">
-            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-              <div>
-                <p className="font-medium">Email</p>
-                <p className="text-xs text-muted-foreground">{user.email}</p>
-              </div>
-              <span className="text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded">Verified</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-              <div>
-                <p className="font-medium">Password</p>
-                <p className="text-xs text-muted-foreground">Last changed: {new Date(user.createdAt).toLocaleDateString()}</p>
-              </div>
-              <span className="text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded">Set</span>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-              <div>
-                <p className="font-medium">Two-Factor Authentication</p>
-                <p className="text-xs text-muted-foreground">Add an extra layer of security</p>
-              </div>
-              <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded">Coming soon</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <Shield size={18} className="text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Two-Factor Authentication</h2>
           </div>
+          <p className="mt-1 text-sm text-muted-foreground">Add an extra layer of security to your account.</p>
+
+          {twofaEnabled && !twofaSetupMode ? (
+            <div className="mt-4">
+              <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-950/20 px-4 py-3">
+                <p className="text-sm font-medium text-green-700 dark:text-green-400">Two-factor authentication is enabled</p>
+                <p className="text-xs text-green-600 dark:text-green-500 mt-0.5">Your account is protected with an authenticator app.</p>
+              </div>
+              <div className="mt-4 max-w-sm space-y-3">
+                <label className="text-sm font-medium">Enter your password to disable 2FA</label>
+                <Input
+                  type="password"
+                  value={twofaDisablePassword}
+                  onChange={(e) => setTwofaDisablePassword(e.target.value)}
+                  placeholder="Current password"
+                />
+                {twofaDisableError && <p className="text-sm text-red-600">{twofaDisableError}</p>}
+                <Button
+                  variant="destructive"
+                  onClick={disable2fa}
+                  disabled={!twofaDisablePassword || twofaDisabling}
+                >
+                  Disable 2FA
+                </Button>
+              </div>
+            </div>
+          ) : twofaSetupMode ? (
+            <div className="mt-4 max-w-sm space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Scan the QR code with <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong>, then enter the 6-digit code below.
+              </p>
+              {twofaQrDataUrl && (
+                <div className="flex justify-center">
+                  <div className="rounded-xl border border-border bg-white p-3">
+                    <Image src={twofaQrDataUrl} alt="2FA QR Code" width={180} height={180} unoptimized />
+                  </div>
+                </div>
+              )}
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-center">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Or enter this key manually</p>
+                <p className="font-mono text-sm tracking-wider select-all break-all">{twofaSecret}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">Authentication Code</label>
+                <Input
+                  value={twofaToken}
+                  onChange={(e) => setTwofaToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="000000"
+                  className="text-center text-lg tracking-widest font-mono"
+                  maxLength={6}
+                />
+              </div>
+              {twofaError && <p className="text-sm text-red-600">{twofaError}</p>}
+              <div className="flex gap-2">
+                <Button onClick={verify2faSetup} disabled={twofaToken.length !== 6 || twofaLoading}>
+                  Verify & Enable
+                </Button>
+                <Button variant="secondary" onClick={() => { setTwofaSetupMode(false); setTwofaError(''); }}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4">
+              <Button onClick={start2faSetup}>
+                <Shield size={16} /> Set up Two-Factor Authentication
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </div>

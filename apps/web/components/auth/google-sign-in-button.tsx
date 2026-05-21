@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+
 declare global {
   interface Window {
     google?: {
@@ -19,9 +20,10 @@ declare global {
 
 type GoogleSignInButtonProps = {
   redirectTo?: string;
+  onRequires2fa?: (tempToken: string) => void;
 };
 
-export function GoogleSignInButton({ redirectTo = '/dashboard' }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({ redirectTo = '/dashboard', onRequires2fa }: GoogleSignInButtonProps) {
   const buttonRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -47,10 +49,16 @@ export function GoogleSignInButton({ redirectTo = '/dashboard' }: GoogleSignInBu
         return;
       }
 
+      const data = await result.json();
+      if (data.requires2fa) {
+        onRequires2fa?.(data.tempToken);
+        return;
+      }
+
       router.push(redirectTo);
       router.refresh();
     },
-    [redirectTo, router],
+    [redirectTo, router, onRequires2fa],
   );
 
   const renderGoogleButton = useCallback(() => {
