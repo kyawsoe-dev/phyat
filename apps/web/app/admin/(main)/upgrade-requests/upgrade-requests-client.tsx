@@ -13,6 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Input } from '../../../../components/ui/input';
 
 type RequestItem = {
   id: string;
@@ -39,6 +40,7 @@ export function AdminUpgradeRequestsClient({ initialData }: { initialData: Reque
 
   const [data, setData] = useState(initialData);
   const [statusFilter, setStatusFilter] = useState('');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -52,6 +54,12 @@ export function AdminUpgradeRequestsClient({ initialData }: { initialData: Reque
 
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Client-side filtered requests (search by user email/name)
+  const filteredRequests = data.requests.filter((req) =>
+    req.user.email.toLowerCase().includes(search.toLowerCase()) ||
+    (req.user.name || '').toLowerCase().includes(search.toLowerCase())
+  );
 
   async function loadPage(page: number, status?: string) {
     setLoading(true);
@@ -143,17 +151,27 @@ export function AdminUpgradeRequestsClient({ initialData }: { initialData: Reque
         </Button>
       </div>
 
-      <div className="flex gap-2">
-        {['', 'PENDING', 'APPROVED', 'DENIED'].map((s) => (
-          <Button
-            key={s || 'all'}
-            variant={statusFilter === s ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => handleFilterChange(s)}
-          >
-            {s || 'All'}
-          </Button>
-        ))}
+      {/* Search + Status filters with equal height */}
+      <div className="flex flex-col sm:flex-row items-center gap-3">
+        <Input
+          placeholder="Search by email or name..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-10 w-full sm:w-64"
+        />
+
+        <div className="flex gap-2">
+          {['', 'PENDING', 'APPROVED', 'DENIED'].map((s) => (
+            <Button
+              key={s || 'all'}
+              variant={statusFilter === s ? 'secondary' : 'ghost'}
+              className="h-10 px-4 text-sm"
+              onClick={() => handleFilterChange(s)}
+            >
+              {s || 'All'}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -170,10 +188,10 @@ export function AdminUpgradeRequestsClient({ initialData }: { initialData: Reque
               </tr>
             </thead>
             <tbody>
-              {data.requests.length === 0 && (
+              {filteredRequests.length === 0 && (
                 <tr><td colSpan={6} className="p-8 text-center text-muted-foreground">No requests found.</td></tr>
               )}
-              {data.requests.map((req) => (
+              {filteredRequests.map((req) => (
                 <tr key={req.id} className="border-b last:border-0 hover:bg-muted/30">
                   <td className="p-3">
                     <div>{req.user.name || req.user.email}</div>

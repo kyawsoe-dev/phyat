@@ -302,6 +302,38 @@ export class AdminService {
     return { success: true };
   }
 
+  async updateLink(id: string, data: {
+    title?: string;
+    notes?: string;
+    destination?: string;
+    status?: 'ACTIVE' | 'DISABLED';
+    tags?: string[];
+  }) {
+    const link = await this.prisma.link.findUnique({ where: { id } });
+    if (!link) {
+      throw new NotFoundException('Link not found.');
+    }
+
+    const updateData: any = {};
+
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.destination !== undefined) updateData.destination = data.destination;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+
+    if (Object.keys(updateData).length === 0) {
+      return { success: true, message: 'No changes' };
+    }
+
+    await this.prisma.link.update({
+      where: { id },
+      data: updateData,
+    });
+
+    return { success: true };
+  }
+
   async getAllLinks(page: number, limit: number, search?: string) {
     const where: Record<string, unknown> = {};
     if (search) {

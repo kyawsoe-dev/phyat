@@ -106,6 +106,21 @@ export class AdminController {
     return this.admin.deleteLinkById(id);
   }
 
+  @Put('links/:id')
+  @ApiOperation({ summary: 'Update any link (admin moderation)' })
+  updateLink(
+    @Param('id') id: string,
+    @Body() data: {
+      title?: string;
+      notes?: string;
+      destination?: string;
+      status?: 'ACTIVE' | 'DISABLED';
+      tags?: string[];
+    },
+  ) {
+    return this.admin.updateLink(id, data);
+  }
+
   @Get('analytics')
   @ApiOperation({ summary: 'Get admin-level analytics' })
   getAnalytics(@Query('days') days = '30') {

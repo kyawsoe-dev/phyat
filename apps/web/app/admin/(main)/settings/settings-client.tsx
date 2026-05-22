@@ -9,6 +9,14 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 type Tab = 'profile' | 'security' | 'notifications';
 
@@ -67,6 +75,10 @@ export function AdminSettingsClient({ admin: initialAdmin }: { admin: AdminData 
     const saved = localStorage.getItem('phyat_admin_notification_prefs');
     return saved ? JSON.parse(saved) : defaultPrefs;
   });
+
+  // Info dialog (replaces native alert)
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
 
   const tabs: { id: Tab; label: string; icon: typeof User }[] = [
     { id: 'profile', label: 'Profile', icon: User },
@@ -210,6 +222,7 @@ export function AdminSettingsClient({ admin: initialAdmin }: { admin: AdminData 
   ];
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header - exactly like user settings */}
       <div>
@@ -262,7 +275,10 @@ export function AdminSettingsClient({ admin: initialAdmin }: { admin: AdminData 
                       type="button"
                       className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white shadow-sm"
                       title="Change avatar"
-                      onClick={() => alert("Avatar upload coming soon for admin accounts")}
+                      onClick={() => {
+                        setInfoMessage("Avatar upload coming soon for admin accounts");
+                        setInfoDialogOpen(true);
+                      }}
                     >
                       <Pencil size={10} />
                     </button>
@@ -350,7 +366,7 @@ export function AdminSettingsClient({ admin: initialAdmin }: { admin: AdminData 
                       Save
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       onClick={() => {
                         setName(admin.name || "");
                         setEditing(false);
@@ -542,5 +558,19 @@ export function AdminSettingsClient({ admin: initialAdmin }: { admin: AdminData 
         </div>
       )}
     </div>
+
+    {/* Info Dialog (replaces native alert) */}
+    <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Notice</DialogTitle>
+          <DialogDescription>{infoMessage}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button onClick={() => setInfoDialogOpen(false)}>OK</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

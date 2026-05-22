@@ -3,6 +3,14 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 type Tier = {
   id: string;
@@ -26,6 +34,10 @@ export function AdminTiersClient({ initialTiers }: { initialTiers: Tier[] }) {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Tier | null>(null);
   const [form, setForm] = useState<any>({});
+
+  // Dialog states (replace native alert)
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const defaultForm = {
     code: 'PRO', name: '', description: '', features: [''],
@@ -64,7 +76,8 @@ export function AdminTiersClient({ initialTiers }: { initialTiers: Tier[] }) {
       setShowModal(false);
       await refresh();
     } catch (err: any) {
-      alert('Save failed: ' + (err.message || ''));
+      setErrorMessage('Save failed: ' + (err.message || ''));
+      setErrorDialogOpen(true);
     }
   }
 
@@ -77,7 +90,8 @@ export function AdminTiersClient({ initialTiers }: { initialTiers: Tier[] }) {
       });
       await refresh();
     } catch {
-      alert('Status update failed');
+      setErrorMessage('Status update failed');
+      setErrorDialogOpen(true);
     }
   }
 
@@ -111,7 +125,8 @@ export function AdminTiersClient({ initialTiers }: { initialTiers: Tier[] }) {
       });
       await refresh();
     } catch {
-      alert('Reorder failed');
+      setErrorMessage('Reorder failed');
+      setErrorDialogOpen(true);
     }
   }
 
@@ -201,6 +216,19 @@ export function AdminTiersClient({ initialTiers }: { initialTiers: Tier[] }) {
       )}
 
       <p className="text-xs text-muted-foreground">After changes, users see updated plans. Upgrade requests use these tiers.</p>
+
+      {/* Error Dialog (replaces native alert) */}
+      <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Something went wrong</DialogTitle>
+            <DialogDescription>{errorMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialogOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

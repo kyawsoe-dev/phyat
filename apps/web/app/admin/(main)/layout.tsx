@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { apiBaseUrl } from '@/lib/utils';
-import { getAdminToken, getAdmin2faToken } from '@/lib/admin-auth';
+import { getAdminToken } from '@/lib/admin-auth';
 import { AdminSidebar } from '../components/admin-sidebar';
 import { AdminNavbar } from '../components/admin-navbar';
 import { AdminProvider } from '../admin-context';
@@ -23,20 +23,6 @@ export default async function AdminMainLayout({ children }: { children: React.Re
   const user = await meResponse.json() as { isAdmin: boolean; name?: string | null; email: string };
 
   if (!user.isAdmin) redirect('/dashboard');
-
-  const twofaToken = getAdmin2faToken();
-  if (!twofaToken) {
-    redirect('/admin/login');
-  }
-
-  const twofaResponse = await fetch(`${apiBaseUrl}/auth/me`, {
-    headers: { authorization: `Bearer ${twofaToken}` },
-    cache: 'no-store',
-  });
-
-  if (!twofaResponse.ok) {
-    redirect('/admin/login');
-  }
 
   return (
     <AdminProvider>

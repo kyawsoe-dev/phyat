@@ -3,6 +3,14 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 type Invoice = {
   id: string;
@@ -34,6 +42,12 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
   const [editId, setEditId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ amount: 0, status: 'UNPAID', paidAt: '' });
 
+  // Dialog states (replace native alert/confirm)
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
   async function loadPage(page: number, s?: string, st?: string) {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: '20' });
@@ -49,7 +63,11 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
 
   async function createInvoice(e: React.FormEvent) {
     e.preventDefault();
-    if (!createForm.userId || !createForm.amount) return alert('User ID and amount required');
+    if (!createForm.userId || !createForm.amount) {
+      setErrorMessage('User ID and amount required');
+      setErrorDialogOpen(true);
+      return;
+    }
     try {
       await fetch('/api/admin/invoices', {
         method: 'POST',
@@ -64,7 +82,8 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
       setCreateForm({ userId: '', amount: 0, description: '' });
       loadPage(1, search, statusFilter || undefined);
     } catch {
-      alert('Create failed');
+      setErrorMessage('Create failed');
+      setErrorDialogOpen(true);
     }
   }
 
@@ -92,18 +111,27 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
       setEditId(null);
       loadPage(data.page, search, statusFilter || undefined);
     } catch {
-      alert('Update failed');
+      setErrorMessage('Update failed');
+      setErrorDialogOpen(true);
     }
   }
 
-  async function deleteInvoice(id: string) {
-    if (!confirm('Delete this invoice?')) return;
+  function openDeleteDialog(id: string) {
+    setDeleteId(id);
+    setDeleteDialogOpen(true);
+  }
+
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setDeleteDialogOpen(false);
     try {
-      await fetch(`/api/admin/invoices/${id}`, { method: 'DELETE' });
+      await fetch(`/api/admin/invoices/${deleteId}`, { method: 'DELETE' });
       loadPage(data.page, search, statusFilter || undefined);
     } catch {
-      alert('Delete failed');
+      setErrorMessage('Delete failed');
+      setErrorDialogOpen(true);
     }
+    setDeleteId(null);
   }
 
   async function quickMarkPaid(id: string) {
@@ -115,7 +143,8 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
       });
       loadPage(data.page, search, statusFilter || undefined);
     } catch {
-      alert('Failed');
+      setErrorMessage('Failed');
+      setErrorDialogOpen(true);
     }
   }
 
@@ -188,7 +217,7 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
                 <td className="p-3 text-right space-x-1">
                   {inv.status !== 'PAID' && <Button size="sm" variant="secondary" onClick={() => quickMarkPaid(inv.id)}>Mark Paid</Button>}
                   <Button size="sm" variant="secondary" onClick={() => startEdit(inv)}>Edit</Button>
-                  <Button size="sm" variant="destructive" onClick={() => deleteInvoice(inv.id)}>Delete</Button>
+                  <Button size="sm" variant="destructive" onClick={() => openDeleteDialog(inv.id)}>Delete</Button>
                 </td>
               </tr>
             ))}
@@ -223,6 +252,39 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
           <Button size="sm" variant="secondary" disabled={data.page >= data.totalPages} onClick={() => loadPage(data.page + 1, search, statusFilter || undefined)} className="ml-1">→</Button>
         </div>
       </div>
+
+      {/* Error Dialog (replaces native alert) */}
+      <Dialog open={errorDialogOpen} onOpenChange={setErrorDialogOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Something went wrong</DialogTitle>
+            <DialogDescription>{errorMessage}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setErrorDialogOpen(false)}>OK</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog (replaces native confirm) */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Delete Invoice?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the invoice record. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:justify-end gap-2 pt-4">
+            <Button variant="secondary" onClick={() => setDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
