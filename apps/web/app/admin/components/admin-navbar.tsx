@@ -58,7 +58,7 @@ export function AdminNavbar({ user }: { user: AdminUser }) {
     fetch('/api/auth/signout', { method: 'POST' }).finally(() => {
       fetch('/api/admin/login', { method: 'DELETE' });
       fetch('/api/admin/2fa/set-session', { method: 'DELETE' });
-      router.push('/sign-in');
+      router.push('/admin/login');
     });
   }
 

@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { apiBaseUrl } from '@/lib/utils';
+import { decrypt } from '@/lib/crypto';
 
 const cookieName = 'phyat_token';
 
@@ -12,7 +13,8 @@ function shortUrlForHost(shortHost: string, slug: string) {
 }
 
 export async function createLink(formData: FormData) {
-  const token = cookies().get(cookieName)?.value;
+  const raw = cookies().get(cookieName)?.value;
+  const token = raw ? decrypt(raw) : undefined;
   if (!token) throw new Error('You must be signed in to create links.');
 
   const destination = formData.get('destination');

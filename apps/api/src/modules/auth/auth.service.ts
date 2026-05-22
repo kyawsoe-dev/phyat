@@ -61,15 +61,18 @@ export class AuthService {
     return { accessToken, user: { id: user.id, email: user.email, name: user.name, tier: user.tier } };
   }
 
-  private async tempSession(user: { id: string; email: string; name: string | null }) {
+  private async tempSession(user: { id: string; email: string; name: string | null }, type?: 'admin') {
     const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email }, { expiresIn: '5m' });
+    if (type === 'admin') {
+      return { accessToken, requiresAdmin2fa: true, user: { id: user.id, email: user.email, name: user.name } };
+    }
     return { accessToken, requires2fa: true, user: { id: user.id, email: user.email, name: user.name } };
   }
 
   async login(input: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
-      select: { id: true, email: true, name: true, user2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
+      select: { id: true, email: true, name: true, user2faEnabled: true, admin2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     if (!user || !user.passwordHash || !(await bcrypt.compare(input.password, user.passwordHash))) {
@@ -78,6 +81,10 @@ export class AuthService {
 
     if (user.user2faEnabled) {
       return this.tempSession(user);
+    }
+
+    if (user.admin2faEnabled) {
+      return this.tempSession(user, 'admin');
     }
 
     return this.fullSession(user);

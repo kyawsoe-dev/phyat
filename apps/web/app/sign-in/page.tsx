@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Logo } from "@/components/logo";
 import { AlertCircle, Shield, Loader2, Smartphone } from "lucide-react";
-import { signIn } from "./actions";
+import { signIn, setSessionToken } from "./actions";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
 export default function SignInPage() {
@@ -53,7 +53,7 @@ export default function SignInPage() {
         body: JSON.stringify({}),
       });
 
-      document.cookie = `phyat_token=${session.accessToken}; path=/; max-age=604800; samesite=lax${location.protocol === 'https:' ? '; secure' : ''}`;
+      await setSessionToken(session.accessToken);
 
       router.push('/dashboard');
       router.refresh();

@@ -34,6 +34,18 @@ export default function AdminLoginPage() {
 
       const data = await res.json();
 
+      // Admin 2FA required
+      if (data.requiresAdmin2fa) {
+        router.push(`/admin/2fa/verify?token=${encodeURIComponent(data.accessToken)}`);
+        return;
+      }
+
+      // User-level 2FA — admins should use regular sign-in page
+      if (data.requires2fa) {
+        router.push('/sign-in');
+        return;
+      }
+
       const meRes = await fetch(`${apiBaseUrl}/auth/me`, {
         headers: { authorization: `Bearer ${data.accessToken}` },
         cache: 'no-store',

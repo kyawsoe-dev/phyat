@@ -1,15 +1,17 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import { encrypt, decrypt } from './crypto';
 
 const adminTokenCookie = 'phyat_admin_token';
 const admin2faCookie = 'phyat_admin_2fa';
 
 export function getAdminToken() {
-  return cookies().get(adminTokenCookie)?.value;
+  const value = cookies().get(adminTokenCookie)?.value;
+  return value ? decrypt(value) : undefined;
 }
 
 export function setAdminToken(token: string) {
-  cookies().set(adminTokenCookie, token, {
+  cookies().set(adminTokenCookie, encrypt(token), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',
@@ -23,7 +25,8 @@ export function clearAdminToken() {
 }
 
 export function getAdmin2faToken() {
-  return cookies().get(admin2faCookie)?.value;
+  const value = cookies().get(admin2faCookie)?.value;
+  return value ? decrypt(value) : undefined;
 }
 
 export function clearAdmin2faToken() {

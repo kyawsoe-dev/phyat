@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { encrypt } from '@/lib/crypto';
 
 export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
   }
 
   const response = NextResponse.json({ success: true });
-  response.cookies.set('phyat_admin_2fa', twofaToken, {
+  response.cookies.set('phyat_admin_2fa', encrypt(twofaToken), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

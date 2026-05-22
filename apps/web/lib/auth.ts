@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { apiBaseUrl } from './utils';
+import { encrypt, decrypt } from './crypto';
 
 const cookieName = 'phyat_token';
 
@@ -26,7 +27,8 @@ export type User = {
 };
 
 export function getToken() {
-  return cookies().get(cookieName)?.value;
+  const value = cookies().get(cookieName)?.value;
+  return value ? decrypt(value) : undefined;
 }
 
 export async function getCurrentUser(): Promise<User | null> {
@@ -45,7 +47,7 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 export function setToken(token: string) {
-  cookies().set(cookieName, token, {
+  cookies().set(cookieName, encrypt(token), {
     httpOnly: true,
     sameSite: 'lax',
     secure: process.env.NODE_ENV === 'production',

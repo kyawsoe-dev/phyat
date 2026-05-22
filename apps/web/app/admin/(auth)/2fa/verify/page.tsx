@@ -1,26 +1,41 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Shield, Key, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { apiBaseUrl } from '@/lib/utils';
 
 export default function Admin2faVerifyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tempToken = searchParams.get('token');
+
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (!tempToken) {
+      setError('Missing login session. Please sign in again.');
+    }
+  }, [tempToken]);
+
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
+    if (!tempToken) return;
+
     setError('');
     setLoading(true);
 
     try {
-      const res = await fetch('/api/admin/2fa/verify', {
+      const res = await fetch(`${apiBaseUrl}/admin/2fa/verify`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${tempToken}`,
+        },
         body: JSON.stringify({ token }),
       });
 
@@ -31,6 +46,14 @@ export default function Admin2faVerifyPage() {
 
       const data = await res.json();
 
+      // Set admin auth cookie
+      await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accessToken: tempToken }),
+      });
+
+      // Set 2FA session cookie
       await fetch('/api/admin/2fa/set-session', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },

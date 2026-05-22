@@ -2,6 +2,8 @@
 
 Phyat (ဖြတ်) is a production-oriented link management and developer platform built around a fast PostgreSQL hot path. Redis is intentionally omitted to reduce cost. Redirects use `Link.slug @unique` (scoped per `shortHost`), which creates a PostgreSQL unique B-tree index, and the NestJS redirect service always uses Prisma `findUnique({ where: { slug, shortHost } })`.
 
+Billing is **manual** — there is no Stripe integration. Users request tier upgrades via the plans page, and admins approve/deny those requests. Invoices are created automatically on approval and displayed in user settings.
+
 ## Project Structure
 
 ```
@@ -21,29 +23,33 @@ phyat/
 │   │       │   ├── security.middleware.ts          # Security headers (HSTS, CSP, XFO, etc.)
 │   │       │   └── exception.filter.ts            # Global exception formatting
 │   │       └── modules/
-│   │           ├── auth/         # User registration, login, JWT issuance, Google OAuth
-│   │           ├── links/        # Link CRUD, bulk, redirect (/r/:slug), slug generation
-│   │           ├── analytics/    # Click event tracking, aggregated stats, device/referrer/geo
-│   │           ├── api-keys/     # Developer API key CRUD (SHA-256 hashed, last-four display)
-│   │           ├── subscriptions/  # Tier plans, Stripe Checkout, usage counters, coupons
-│   │           ├── qr-codes/     # QR code generation (qrcode lib), download, scan tracking
-│   │           ├── campaigns/    # Campaign grouping, link assignment, aggregated campaign stats
-│   │           ├── domains/      # Custom domain add/verify/delete, DNS verification
-│   │           └── webhooks/     # Webhook endpoint management, event dispatch, delivery logging
+│   │           ├── auth/           # User registration, login, JWT issuance, Google OAuth
+│   │           ├── links/          # Link CRUD, bulk, redirect (/r/:slug), slug generation
+│   │           ├── analytics/      # Click event tracking, aggregated stats, device/referrer/geo
+│   │           ├── api-keys/       # Developer API key CRUD (SHA-256 hashed, last-four display)
+│   │           ├── subscriptions/  # Tier plans, usage counters, coupons, tier switching
+│   │           ├── invoices/       # Manual invoice creation & user listing
+│   │           ├── upgrade-requests/ # User upgrade requests + admin approve/deny workflow
+│   │           ├── admin/          # Admin dashboard, analytics, user/link/invoice/request CRUD, 2FA, CSV export
+│   │           ├── qr-codes/       # QR code generation (qrcode lib), download, scan tracking
+│   │           ├── campaigns/      # Campaign grouping, link assignment, aggregated campaign stats
+│   │           ├── domains/        # Custom domain add/verify/delete, DNS verification
+│   │           └── webhooks/       # Webhook endpoint management, event dispatch, delivery logging
 │   └── web/                     # Next.js 14 App Router frontend
 │       ├── app/
 │       │   ├── layout.tsx       # Root layout — Inter font, theme FOUC script
-│       │   ├── page.tsx         # Landing page (server-rendered, getCurrentUser)
+│       │   ├── page.tsx         # Landing page (server-rendered, getCurrentUser, plans-section)
 │       │   ├── [slug]/page.tsx  # Link gateway — resolves metadata, password form, redirect
 │       │   ├── sign-in/         # Login with email/password + Google OAuth
 │       │   ├── sign-up/         # Registration with optional tier param
 │       │   ├── docs/            # Full API documentation page
 │       │   ├── dashboard/       # Authenticated app shell + feature pages
+│       │   ├── admin/           # Admin panel — dashboard, users, links, invoices, requests, tiers, analytics, settings
 │       │   └── api/             # Next.js route handlers (proxies to NestJS backend)
 │       ├── components/
 │       │   ├── landing-hero-client.tsx  # Fixed navbar, hero section, URL shortener form
 │       │   ├── landing-footer.tsx       # Footer with product/resource/company links
-│       │   ├── plans-section.tsx        # Pricing plans with billing toggle
+│       │   ├── plans-section.tsx        # Pricing plans with billing toggle + upgrade confirmation dialog
 │       │   ├── dashboard-navbar.tsx     # Top bar with user dropdown
 │       │   ├── dashboard-sidebar.tsx    # Collapsible sidebar with tier-gated items
 │       │   ├── dashboard-trends.tsx     # Click trends Recharts line chart
@@ -56,7 +62,7 @@ phyat/
 │           ├── auth.ts          # Token management (httpOnly cookie), getCurrentUser, requireUser
 │           └── utils.ts         # cn() classname merger, apiBaseUrl
 ├── prisma/
-│   ├── schema.prisma            # 13 models, 10 enums
+│   ├── schema.prisma            # 15 models, 12 enums
 │   └── seed.ts                  # Tiers (FREE/PRO/DEVELOPER) + coupon (SAVE20)
 └── docs/
     └── architecture.md          # This file
@@ -64,7 +70,7 @@ phyat/
 
 ## Database Schema
 
-13 models with enums for status, events, and feature tracking.
+15 models with enums for status, events, and feature tracking.
 
 ### Core Models
 
@@ -80,9 +86,11 @@ phyat/
 | `WebhookEndpoint` | Webhook subscriber | `url`, `secret`, `events` (WebhookEvent[]), `isActive` |
 | `WebhookDelivery` | Webhook delivery log | `event`, `payload` (JSON), `status`, `attempts`, `lastError` |
 | `UsageCounter` | Monthly per-feature usage | `userId` + `feature` + `month` (unique), `count` |
-| `Subscription` | User subscription record | `tierId`, `status`, `billingCycle`, `stripeSubscriptionId` |
+| `Subscription` | User subscription record | `tierId`, `status`, `billingCycle` |
 | `Coupon` | Discount coupon | `code` (unique), `discountPercent`, `maxUses`, `expiresAt` |
 | `CouponRedemption` | Coupon usage record | `couponId` + `userId` (unique) |
+| `Invoice` | Manual invoice for upgrades | `userId`, `amount`, `description`, `status` (PENDING/PAID), `issuedAt`, `paidAt` |
+| `UpgradeRequest` | Tier upgrade request | `userId`, `requestedTierId`, `status` (PENDING/APPROVED/DENIED), `adminNote` |
 | `Analytics` | Click/scan event log | `eventType`, `userAgent`, `browser`, `os`, `device`, `referrer`, `ip`, `country`, `region`, `city`, `clickedAt` |
 
 ### Key Indexes
@@ -92,6 +100,8 @@ phyat/
 - `Link`: `@@index([expiresAt])` — expiry sweep queries
 - `Analytics`: `@@index([linkId, clickedAt])` — per-link time-range analytics
 - `UsageCounter`: `@@unique([userId, feature, month])` — upsertable monthly counters
+- `Invoice`: `@@index([userId])`, `@@index([status])`
+- `UpgradeRequest`: `@@index([userId])`, `@@index([status])`
 
 ### Enums
 
@@ -107,6 +117,8 @@ phyat/
 | `WebhookEvent` | `LINK_CREATED`, `LINK_UPDATED`, `LINK_DELETED`, `LINK_CLICKED`, `QR_CREATED`, `QR_SCANNED` |
 | `WebhookDeliveryStatus` | `PENDING`, `DELIVERED`, `FAILED` |
 | `UsageFeature` | `LINKS`, `QR_CODES`, `CUSTOM_DOMAINS`, `API_KEYS`, `WEBHOOKS`, `API_CALLS`, `WEBHOOK_DELIVERIES`, `EXPORTS`, `BULK_ROWS` |
+| `RequestStatus` | `PENDING`, `APPROVED`, `DENIED` |
+| `InvoiceStatus` | `PENDING`, `PAID` |
 
 ## Redirect Flow
 
@@ -119,6 +131,26 @@ phyat/
 7. If password already verified (session cookie) or no password → gateway calls `GET /r/:slug`
 8. Backend tracks analytics **asynchronously** (fire-and-forget after sending redirect response): parses `User-Agent` via `ua-parser-js`, looks up GeoIP via `ipgeolocation.io`, logs to `Analytics` table
 9. Backend responds with `302 Found` (temporary redirect by default) to preserve changeability of short links; permanent `301` available as `RedirectType.PERMANENT`
+
+## Upgrade Request Flow
+
+1. User browses plans on the landing page (`plans-section.tsx`) or dashboard plans page
+2. Clicking "Choose Pro" / "Upgrade to Developer" opens a confirmation dialog showing plan name and price
+3. On confirm, `POST /api/upgrade-requests` creates a `PENDING` request in the database
+4. A pending banner displays with admin contact information (phone + email)
+5. Multiple requests are prevented — only one PENDING request allowed per user
+6. Admin views all requests via admin panel (`GET admin/upgrade-requests`)
+7. Admin can **approve** (upgrades user tier, auto-creates invoice) or **deny** (with optional note)
+8. On approval, `SubscriptionsService.applyTier()` updates the user's tier and an invoice is created via `InvoiceService.createInvoice()`
+9. User can view the full request history (status plan name, date, admin note) in **Settings → Profile → Upgrade Request History**
+
+## Invoice Flow
+
+1. Invoices are created **only** by the system when an admin approves an upgrade request for a paid tier
+2. `InvoiceService.createInvoice()` stores the user ID, amount (monthly price), description, and `PENDING` status
+3. Admin can list and filter invoices (PENDING/PAID) in the admin panel
+4. User views their invoice history in **Settings → Profile → Invoice History**
+5. (Future: manual mark-as-paid by admin)
 
 ## Authentication & Authorization
 
@@ -155,7 +187,7 @@ phyat/
 
 - **Tenant isolation**: All repository methods scope queries by `userId` extracted from JWT payload
 - **Tier limits**: `TierLimitGuard` checks `UsageCounter` before allowing link/QR creation; Free users limited to 5/month; `TierCapabilityService` resolves feature flags from user's tier
-- **Admin routes**: `AdminGuard` checks `user.isAdmin === true` for tier management endpoints
+- **Admin routes**: `AdminGuard` checks `user.isAdmin === true` for admin endpoints
 
 ## Module Architecture
 
@@ -171,7 +203,7 @@ modules/<name>/
 
 ### Auth Module
 
-- `AuthService` — register, login, googleLogin, changePassword
+- `AuthService` — register, login, googleLogin, changePassword, me (returns user + tier + admin2faEnabled)
 - Passwords hashed with `bcryptjs` (10 salt rounds)
 - `AuthController` — exposes `/auth/*` endpoints
 - `JwtAuthGuard` — verifies JWT and populates `request.user`
@@ -194,13 +226,39 @@ modules/<name>/
 
 ### Subscriptions Module
 
-- `SubscriptionsService` — create Stripe Checkout session, handle upgrades/cancellations, manage subscription lifecycle
+- `SubscriptionsService` — applyTier, switch free plans, manage subscription lifecycle
 - `TierCapabilityService` — evaluates feature availability from user's tier
 - `UsageService` — increment monthly counters, evaluate limits, report current usage vs tier caps
-- `StripeService` — wraps Stripe SDK calls (customers, subscriptions, checkout sessions)
-- Stripe Webhooks controller — handles `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated/deleted` via signature-verified POST at `/stripe/webhook`
 - `CouponRepository` — validate coupon code, check expiry and usage limits
-- Dynamic tier admin endpoints for creating/ordering/deactivating tiers
+- Dynamic tier admin endpoints for updating tiers
+
+### Invoices Module
+
+- `InvoiceService` — createInvoice (called by upgrade-requests on approval), getUserInvoices
+- `InvoiceController` — `GET /invoices` for users, admin endpoints for listing all invoices
+
+### Upgrade Requests Module
+
+- `UpgradeRequestsService` — create (validates tier exists, checks duplicate PENDING), getUserRequests, getAllRequests (admin), approve (upgrades tier + creates invoice), deny (with optional adminNote)
+- `UpgradeRequestsController` — `POST /upgrade-requests`, `GET /upgrade-requests`, `GET admin/upgrade-requests`, `PUT .../approve`, `PUT .../deny`
+
+### Admin Module
+
+- `AdminService` — comprehensive admin operations:
+  - `getDashboardStats()` — total users, links, clicks, tier distribution, recent users, top links, unique IPs, monthly growth, clicks over time (daily bucketed for chart)
+  - `getSystemHealth()` — real analytics from the last hour (clicks, scans, active users, unique IPs, links created)
+  - `getUsers()` — paginated user list with tier info, 2FA status, login method (hasGoogle/hasPassword), admin2faEnabled
+  - `createUser()` — create user with email/name/password/tier/admin
+  - `getUserDetail()`, `updateUser()`, `deleteUser()`
+  - `getAllLinks()`, `updateLink()`, `deleteLinkById()`
+  - `getUserAnalytics()` — per-user aggregated stats (total clicks, by link, by device, by country, by browser, by referrer, over time)
+  - `getLinkAnalytics()` — per-link click list (admin bypass with pagination)
+  - `getLinkAnalyticsStats()` — per-link stats (admin bypass: total, device, browser, referrer, country, city, time series)
+  - `getAdminAnalytics()` — platform-wide analytics (daily series, country breakdown, referrer breakdown, active users, unique IPs)
+  - `exportAnalytics()` — full JSON export of analytics data (CSV-ready)
+  - `getTiers()`, `updateTier()`
+- `Admin2faService` — TOTP-based 2FA for admin accounts (setup, verify, disable)
+- `AdminController` — all `GET/POST/PUT/DELETE /admin/*` endpoints
 
 ### QR Codes Module
 
@@ -247,6 +305,22 @@ Browser → Next.js Route (Server Component)
   → Server Actions POST to NestJS API, then revalidatePath()
 ```
 
+### Admin Panel Pages
+
+| Route | Description |
+|-------|-------------|
+| `/admin` | Dashboard — stat cards, clicks chart (7d/30d/90d), tier distribution with progress bars, today's activity, most active users, top links, recent users |
+| `/admin/login` | Admin login (email + password) |
+| `/admin/2fa/setup` | TOTP setup for admin 2FA |
+| `/admin/2fa/verify` | TOTP verification for admin login |
+| `/admin/users` | Full CRUD — create/edit/delete dialogs, 2FA columns (user + admin), login method, client-side search |
+| `/admin/links` | Link listing — copy button, icon-only actions (analytics, edit, toggle, delete), status badges, client-side search |
+| `/admin/invoices` | Manual invoices — status dropdown filter, client-side search |
+| `/admin/upgrade-requests` | Request management — approve/deny, status dropdown filter |
+| `/admin/tiers` | Tier configuration |
+| `/admin/analytics` | Platform-wide analytics |
+| `/admin/settings` | Admin 2FA enable/disable |
+
 ### Auth Management
 
 Auth is entirely server-side via httpOnly cookies:
@@ -267,6 +341,7 @@ Auth is entirely server-side via httpOnly cookies:
 ### Route Protection
 
 - **Dashboard**: `app/dashboard/layout.tsx` calls `requireUser()` — redirects to `/sign-in` if unauthenticated
+- **Admin panel**: `app/admin/(main)/layout.tsx` calls `requireUser()` + checks `isAdmin` — redirects if not admin
 - **Tier-gated features**: Server components check `user.tier.*` booleans (e.g., `customDomains`, `advancedAnalytics`) and render `<UpgradeRequired>` if feature not available
 - **Dashboard sidebar**: Lock icons on tier-gated nav items, linking to plans page
 
@@ -289,7 +364,6 @@ Auth is entirely server-side via httpOnly cookies:
   - Keyed by `IP + HTTP method + route path`
   - Returns `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` headers
   - Returns `429 Too Many Requests` with `Retry-After` header when exceeded
-- **Stripe webhooks** verified by `stripe.webhooks.constructEvent()` with webhook signing secret
 - **Google OAuth** verifies idToken using fetched JWKS and RSA-SHA256 signature verification
 - **CORS** configured for `WEB_ORIGIN` env var (default `http://localhost:3000`)
 - **Global exception filter** — catches all unhandled exceptions, logs, returns consistent JSON error format
@@ -304,15 +378,15 @@ Auth is entirely server-side via httpOnly cookies:
 
 ## Phases
 
-1. **Database**: Prisma models for `User`, `Tier`, `Link`, `Analytics`, `Domain`, `Campaign`, `ApiKey`, `QrCode`, `WebhookEndpoint`, `WebhookDelivery`, `UsageCounter`, `Subscription`, `Coupon`, `CouponRedemption` — 13 models with expiry tracking, password hashing, click/scan counts, unique slug indexing, and monthly usage counters.
+1. **Database**: Prisma models for `User`, `Tier`, `Link`, `Analytics`, `Domain`, `Campaign`, `ApiKey`, `QrCode`, `WebhookEndpoint`, `WebhookDelivery`, `UsageCounter`, `Subscription`, `Coupon`, `CouponRedemption`, `Invoice`, `UpgradeRequest` — 15 models with expiry tracking, password hashing, click/scan counts, unique slug indexing, monthly usage counters, upgrade request workflow, and manual invoice tracking.
 
-2. **Backend**: NestJS modules organized by Clean Architecture boundaries — interfaces (controllers), application services (use cases), infrastructure (Prisma repositories), and domain (policies/value objects). Swagger/OpenAPI auto-generated at `/api/docs`.
+2. **Backend**: NestJS modules organized by Clean Architecture boundaries — interfaces (controllers), application services (use cases), infrastructure (Prisma repositories), and domain (policies/value objects). Swagger/OpenAPI auto-generated at `/api/docs`. Admin module provides platform-wide analytics, user/link/invoice/request CRUD, and CSV export.
 
-3. **Frontend**: Next.js App Router dashboard for creating links, managing campaigns, viewing analytics charts, editing QR codes, configuring custom domains and webhooks, managing subscriptions, and viewing API keys.
+3. **Frontend**: Next.js App Router dashboard for creating links, managing campaigns, viewing analytics charts, editing QR codes, configuring custom domains and webhooks, managing subscriptions, and viewing API keys. Admin panel for platform management with full CRUD dialogs and analytics visualizations.
 
 4. **Gateway**: Next.js `/[slug]` route server-renders metadata from API, renders password form for protected links or expired/disabled state, and delegates final redirect to NestJS `/r/:slug` with analytics tracking.
 
-5. **Platform**: JWT authentication (httpOnly cookies), tenant-scoped dashboard, tier guards with monthly usage counters, API keys (SHA-256 hashed), Stripe subscription billing, and webhook event dispatch.
+5. **Platform**: JWT authentication (httpOnly cookies), tenant-scoped dashboard, tier guards with monthly usage counters, API keys (SHA-256 hashed), manual upgrade requests with admin approval, auto-invoicing on approval, and webhook event dispatch.
 
 ## Development
 
@@ -340,6 +414,5 @@ Required variables are documented in `.env.example`. Key variables:
 - `DATABASE_URL` — PostgreSQL connection string
 - `JWT_SECRET` — JWT signing secret (min 32 characters)
 - `API_BASE_URL` / `NEXT_PUBLIC_API_BASE_URL` — API endpoints
-- `STRIPE_*` — Stripe credentials for subscription billing
 - `GOOGLE_CLIENT_ID` / `NEXT_PUBLIC_GOOGLE_CLIENT_ID` — Google OAuth
 - `IP_GEOLOCATION_API_KEY` — GeoIP lookups for analytics

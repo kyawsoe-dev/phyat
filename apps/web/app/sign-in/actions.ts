@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { apiBaseUrl } from "@/lib/utils";
 import { setToken } from "@/lib/auth";
 
+export async function setSessionToken(token: string) {
+  setToken(token);
+}
+
 export async function signIn(prev: { error?: string; requires2fa?: boolean; tempToken?: string } | undefined, formData: FormData) {
   const response = await fetch(`${apiBaseUrl}/auth/login`, {
     method: "POST",

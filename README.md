@@ -23,8 +23,10 @@ A production-oriented URL shortener and link management platform built for Myanm
 - **Responsive** — Works on desktop and mobile with collapsible sidebar navigation
 - **Link Gateway** — Smart redirect page with password form, 404, and expired/disabled states
 - **Open Graph** — Dynamic OG image generation for shortened URLs
-- **Stripe Integration** — Subscription billing with monthly/annual pricing and coupon codes
 - **Google OAuth** — Sign in with Google using Google Identity Services (GIS)
+- **Upgrade Requests** — Users request plan upgrades; admins approve/deny with notes (no Stripe)
+- **Manual Invoicing** — Admins create and manage invoices; users view history in settings
+- **Admin Panel** — Full admin dashboard with analytics, user/link/invoice/request CRUD, 2FA, and CSV export
 
 ## Tech Stack
 
@@ -33,7 +35,6 @@ A production-oriented URL shortener and link management platform built for Myanm
 | Frontend | Next.js 14 (App Router), React 18, Tailwind CSS, Radix UI |
 | Backend | NestJS 10, Prisma ORM, PostgreSQL |
 | Auth | JWT (HTTP-only cookies for web, Bearer headers for API), Google OAuth |
-| Payments | Stripe (Checkout, Subscriptions, Webhooks) |
 | QR | `qrcode` npm package (server-side generation) |
 | Charts | Recharts (dashboard analytics visualizations) |
 | Docs | Swagger/OpenAPI (at `/api/docs`) |
@@ -50,9 +51,6 @@ phyat/
 │   │       ├── app.module.ts         # Root module imports
 │   │       ├── common/
 │   │       │   ├── auth/             # Guards & decorators
-│   │       │   │   ├── admin.guard.ts
-│   │       │   │   ├── jwt-auth.guard.ts
-│   │       │   │   └── current-user.decorator.ts
 │   │       │   ├── prisma.service.ts # Singleton Prisma client
 │   │       │   ├── rate-limit.middleware.ts  # 100 req/min per IP
 │   │       │   ├── security.middleware.ts    # Security headers
@@ -62,7 +60,10 @@ phyat/
 │   │           ├── links/            # CRUD, redirect (/r/:slug), slug generation
 │   │           ├── analytics/        # Click tracking, stats, device/referrer breakdown
 │   │           ├── api-keys/         # Developer API key management
-│   │           ├── subscriptions/    # Plans, Stripe checkout, tier guards, coupons
+│   │           ├── subscriptions/    # Plans, tier guards, coupons (no Stripe)
+│   │           ├── invoices/         # Manual invoice creation and listing
+│   │           ├── upgrade-requests/ # User upgrade requests + admin approve/deny
+│   │           ├── admin/            # Admin dashboard, analytics, user/link/invoice/request CRUD, 2FA
 │   │           ├── qr-codes/         # QR generation, download, scan tracking
 │   │           ├── campaigns/        # Campaign CRUD, link assignment, stats
 │   │           ├── domains/          # Custom domain CRUD, DNS verification
@@ -76,11 +77,12 @@ phyat/
 │       │   ├── sign-up/              # Registration page
 │       │   ├── docs/                 # API documentation page
 │       │   ├── dashboard/            # Authenticated dashboard (links, analytics, etc.)
+│       │   ├── admin/                # Admin panel (dashboard, users, links, invoices, requests, tiers, analytics, settings)
 │       │   └── api/                  # Next.js API route proxies to NestJS backend
 │       ├── components/
 │       │   ├── landing-hero-client.tsx   # Landing nav + hero + URL shortener form
 │       │   ├── landing-footer.tsx        # Footer with links
-│       │   ├── plans-section.tsx         # Pricing plans with billing toggle
+│       │   ├── plans-section.tsx         # Pricing plans with billing toggle + confirmation dialog
 │       │   ├── dashboard-navbar.tsx      # Dashboard top navigation
 │       │   ├── dashboard-sidebar.tsx     # Collapsible sidebar with tier-gated items
 │       │   ├── dashboard-trends.tsx      # Click trends line chart
@@ -93,8 +95,8 @@ phyat/
 │           ├── auth.ts               # Token management, getUser, requireUser
 │           └── utils.ts              # cn() classname merger, apiBaseUrl
 ├── prisma/
-│   ├── schema.prisma                 # Database schema (13 models)
-│   └── seed.ts                       # Tier seeding (Free/Pro/Developer) + coupons
+│   ├── schema.prisma                 # Database schema (15 models)
+│   └── seed.ts                       # Tier seeding (Free/Pro/Developer)
 └── docs/
     └── architecture.md               # Detailed architecture documentation
 ```
@@ -138,12 +140,6 @@ cp .env.example .env
 | `PUBLIC_SHORT_URL` | Public short URL base | Yes |
 | `GOOGLE_CLIENT_ID` | Google OAuth client ID | For Google sign-in |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Public Google client ID | For frontend GSI |
-| `STRIPE_SECRET_KEY` | Stripe secret key | For paid subscriptions |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | For webhooks |
-| `STRIPE_PRICE_ID_PRO_MONTHLY` | Stripe Price ID for Pro monthly | For Pro plan |
-| `STRIPE_PRICE_ID_PRO_ANNUAL` | Stripe Price ID for Pro annual | For Pro plan |
-| `STRIPE_PRICE_ID_DEVELOPER_MONTHLY` | Stripe Price ID for Developer monthly | For Developer plan |
-| `STRIPE_PRICE_ID_DEVELOPER_ANNUAL` | Stripe Price ID for Developer annual | For Developer plan |
 | `IP_GEOLOCATION_API_KEY` | API key for ipgeolocation.io | For GeoIP analytics |
 
 4. **Run database migrations**
@@ -158,7 +154,7 @@ npm run prisma:migrate
 npm run prisma:generate
 ```
 
-6. **(Optional) Seed tiers and coupons**
+6. **(Optional) Seed tiers**
 
 ```bash
 npx tsx prisma/seed.ts
@@ -278,48 +274,51 @@ http://localhost:4000/api/docs
 | DELETE | `/webhooks/:id` | JWT | Delete a webhook |
 | POST | `/webhooks/:id/test` | JWT | Send a test event |
 
-### Subscription Endpoints
+### Subscription & Upgrade Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/plans` | — | Get all plans with pricing |
 | GET | `/subscriptions/current` | JWT | Get active subscription |
-| POST | `/subscriptions/checkout` | JWT | Create Stripe Checkout session |
-| POST | `/subscriptions/upgrade` | JWT | Upgrade plan (free, no payment) |
-| POST | `/subscriptions/cancel` | JWT | Cancel subscription |
+| POST | `/subscriptions/upgrade` | JWT | Switch tier (free plans only) |
 | POST | `/coupons/redeem` | JWT | Validate and redeem a coupon |
 | GET | `/usage/current` | JWT | Get current usage vs tier limits |
+| POST | `/upgrade-requests` | JWT | Submit a plan upgrade request |
+| GET | `/upgrade-requests` | JWT | Get my upgrade request history |
+
+### Invoice Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/invoices` | JWT | List my invoices |
 
 ### Admin Endpoints
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| POST | `/admin/tiers` | Admin | Create a dynamic tier |
+| GET | `/admin/dashboard` | Admin | Dashboard overview stats |
+| GET | `/admin/health` | Admin | System health metrics |
+| GET | `/admin/users` | Admin | List users with pagination |
+| POST | `/admin/users` | Admin | Create a user |
+| GET | `/admin/users/:id` | Admin | Get user details |
+| PUT | `/admin/users/:id` | Admin | Update user (name, tier, admin) |
+| DELETE | `/admin/users/:id` | Admin | Delete a user |
+| GET | `/admin/users/:id/analytics` | Admin | Per-user aggregated analytics |
+| GET | `/admin/links` | Admin | List all links |
+| PUT | `/admin/links/:id` | Admin | Update any link |
+| DELETE | `/admin/links/:id` | Admin | Delete any link |
+| GET | `/admin/analytics/links/:id` | Admin | Per-link click list (admin bypass) |
+| GET | `/admin/analytics/links/:id/stats` | Admin | Per-link stats (admin bypass) |
+| GET | `/admin/analytics` | Admin | Aggregated platform analytics |
+| GET | `/admin/analytics/export` | Admin | Export analytics as JSON (CSV-ready) |
+| GET | `/admin/tiers` | Admin | List all tiers |
 | PUT | `/admin/tiers/:id` | Admin | Update a tier |
-| PATCH | `/admin/tiers/:id/status` | Admin | Activate/deactivate a tier |
-| PUT | `/admin/tiers/order` | Admin | Reorder tier display order |
-
-### Stripe Webhook
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/stripe/webhook` | Stripe webhook for Checkout/subscription lifecycle events |
-
-### Developer API
-
-The `POST /api/v1/shorten` endpoint allows programmatic link creation using an API key:
-
-```bash
-curl -X POST http://localhost:4000/api/v1/shorten \
-  -H "PH-API-KEY: phyat_live_..." \
-  -H "Content-Type: application/json" \
-  -d '{
-    "destination": "https://example.com/very-long-page",
-    "customAlias": "my-link",
-    "expiresAt": "2026-12-31T23:59:59Z",
-    "password": "secret123"
-  }'
-```
+| GET | `/admin/upgrade-requests` | Admin | List all upgrade requests |
+| PUT | `/admin/upgrade-requests/:id/approve` | Admin | Approve a request |
+| PUT | `/admin/upgrade-requests/:id/deny` | Admin | Deny a request (with note) |
+| GET | `/admin/2fa/setup` | Admin | Start 2FA setup |
+| POST | `/admin/2fa/verify-setup` | Admin | Verify and enable admin 2FA |
+| POST | `/admin/2fa/disable` | Admin | Disable admin 2FA |
 
 ### Link Gateway Flow
 
@@ -329,6 +328,16 @@ curl -X POST http://localhost:4000/api/v1/shorten \
 4. If expired or disabled → renders 410 "Link no longer available" page
 5. If password-protected and not verified → renders password form
 6. Otherwise → calls `GET /r/:slug` with forwarded headers (user-agent, IP, referrer) for redirect + async analytics tracking
+
+### Upgrade Request Flow
+
+1. User clicks "Choose Pro" or "Upgrade to Developer" on plans page
+2. Confirmation dialog appears with plan name and price
+3. On confirm, `POST /api/upgrade-requests` creates a PENDING request
+4. Pending banner shows with admin contact details
+5. Admin reviews and approves/denies via admin panel
+6. On approval, user's tier is upgraded and an invoice is auto-created
+7. User sees request history (Pending/Approved/Denied with notes) in Settings → Profile
 
 ## Tier Plans
 
@@ -367,7 +376,6 @@ Annual billing discounts: Pro $120/yr (23% off), Developer $276/yr (21% off).
 - **Tier limit guards** — Free users capped at 5 links/month via `TierLimitGuard`; Pro/Developer use `maxLinks = NULL`
 - **Security headers** via NestJS `SecurityMiddleware` (HSTS, X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy)
 - **Rate limiting** — 100 requests/minute per IP via in-memory `RateLimitMiddleware`
-- **Stripe webhooks** verified by signature using `stripe.webhooks.constructEvent()`
 - **Google OAuth** manually verifies idToken signature using RSA-SHA256 with JWKS from Google
 - **CORS** configured for `WEB_ORIGIN` (default `http://localhost:3000`)
 
@@ -388,9 +396,16 @@ Annual billing discounts: Pro $120/yr (23% off), Developer $276/yr (21% off).
 | `/dashboard/analytics` | Click analytics overview |
 | `/dashboard/campaigns` | Campaign management and link assignment |
 | `/dashboard/domains` | Custom domain management |
-| `/dashboard/plans` | Plan selection and subscription management |
-| `/dashboard/plans/checkout-success` | Stripe checkout result page |
-| `/dashboard/settings` | Account settings, profile, API keys, security |
+| `/dashboard/plans` | Plan selection with confirmation dialog |
+| `/dashboard/settings` | Account settings, profile, API keys, security, invoice history, upgrade request history |
+| `/admin` | Admin dashboard with analytics, charts, tier distribution |
+| `/admin/users` | Admin user CRUD with 2FA status, login methods, create/edit/delete dialogs |
+| `/admin/links` | Admin link management with copy, status toggle, action buttons |
+| `/admin/invoices` | Admin invoice management with status filter |
+| `/admin/upgrade-requests` | Admin request approval/denial with status filter |
+| `/admin/tiers` | Tier configuration |
+| `/admin/analytics` | Platform-wide analytics |
+| `/admin/settings` | Admin settings including 2FA |
 
 ### Theme System
 
