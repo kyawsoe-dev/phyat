@@ -8,7 +8,10 @@
     "dev:web": "npm --workspace apps/web run dev",
     "build": "npm --workspaces run build",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:seed": "prisma db seed",
+    "deploy": "bash scripts/deploy.sh",
+    "deploy:prod": "bash scripts/deploy.sh production"
   },
   "workspaces": [
     "apps/api",
