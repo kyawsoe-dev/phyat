@@ -28,6 +28,7 @@ import {
   CreditCard,
   RefreshCw,
   FileText,
+  ArrowUp,
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -490,6 +491,9 @@ function ProfileSection({
 
       {/* Invoice History */}
       <InvoicesSection />
+
+      {/* Upgrade Request History */}
+      <UpgradeRequestsSection />
     </div>
   );
 }
@@ -537,6 +541,71 @@ function InvoicesSection() {
                 +{invoices.length - 5} more
               </div>
             )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UpgradeRequestsSection() {
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/upgrade-requests", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        const list = Array.isArray(data) ? data : data.requests || [];
+        setRequests(list);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  function statusBadge(status: string) {
+    switch (status) {
+      case "PENDING":
+        return <span className="rounded-full bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-400">Pending</span>;
+      case "APPROVED":
+        return <span className="rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">Approved</span>;
+      case "DENIED":
+        return <span className="rounded-full bg-red-100 dark:bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-400">Denied</span>;
+      default:
+        return <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">{status}</span>;
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card shadow-sm">
+      <div className="p-6">
+        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+          <ArrowUp size={16} /> Upgrade Request History
+        </h3>
+        {loading ? (
+          <div className="text-sm text-muted-foreground">Loading...</div>
+        ) : requests.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No upgrade requests yet.</p>
+        ) : (
+          <div className="space-y-2 text-sm">
+            {requests.map((r: any) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between border-b pb-2 last:border-0"
+              >
+                <div>
+                  <span className="font-medium">{r.tier?.name || "Unknown plan"}</span>
+                  <span className="text-muted-foreground ml-2">
+                    {new Date(r.createdAt).toLocaleDateString()}
+                  </span>
+                  {r.adminNote && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Note: {r.adminNote}
+                    </p>
+                  )}
+                </div>
+                {statusBadge(r.status)}
+              </div>
+            ))}
           </div>
         )}
       </div>

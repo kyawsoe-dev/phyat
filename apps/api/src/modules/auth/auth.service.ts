@@ -124,7 +124,7 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { id: true, email: true, name: true, isAdmin: true, user2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
+      select: { id: true, email: true, name: true, isAdmin: true, user2faEnabled: true, admin2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
     });
 
     return {
@@ -133,6 +133,7 @@ export class AuthService {
       name: user.name,
       isAdmin: user.isAdmin,
       user2faEnabled: user.user2faEnabled,
+      admin2faEnabled: user.admin2faEnabled,
       hasPassword: !!user.passwordHash,
       createdAt: user.createdAt,
       tier: user.tier,

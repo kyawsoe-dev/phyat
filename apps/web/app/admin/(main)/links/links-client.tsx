@@ -7,6 +7,11 @@ import {
   BarChart3,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  Copy,
+  Check,
+  Edit,
+  Power,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,6 +59,16 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
   const [analyticsData, setAnalyticsData] = useState<Record<string, any>>({});
   const [loadingAnalytics, setLoadingAnalytics] = useState<string | null>(null);
 
+  // Copy state
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  function handleCopy(slug: string) {
+    navigator.clipboard.writeText(`${window.location.origin}/${slug}`).then(() => {
+      setCopiedId(slug);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }
+
   // Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<LinkItem | null>(null);
@@ -72,10 +87,19 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
     tags: "",
   });
 
-  async function loadPage(page: number, searchTerm?: string) {
+  // Client-side filtered links
+  const filteredLinks = data.links.filter((link) =>
+    !search ||
+    link.slug.toLowerCase().includes(search.toLowerCase()) ||
+    link.destination.toLowerCase().includes(search.toLowerCase()) ||
+    (link.title || '').toLowerCase().includes(search.toLowerCase()) ||
+    link.user.email.toLowerCase().includes(search.toLowerCase()) ||
+    (link.user.name || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  async function loadPage(page: number) {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "20" });
-    if (searchTerm) params.set("search", searchTerm);
 
     try {
       const res = await fetch(`/api/admin/links?${params}`);
@@ -86,10 +110,6 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
     } finally {
       setLoading(false);
     }
-  }
-
-  function handleSearch() {
-    loadPage(1, search || undefined);
   }
 
   function openDeleteDialog(link: LinkItem) {
@@ -106,7 +126,7 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
     try {
       const res = await fetch(`/api/admin/links/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Delete failed");
-      loadPage(data.page, search || undefined);
+      loadPage(data.page);
     } catch {
       alert("Failed to delete link");
     } finally {
@@ -156,7 +176,7 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
 
       setEditDialogOpen(false);
       setEditingLink(null);
-      loadPage(data.page, search || undefined);
+      loadPage(data.page);
     } catch {
       alert("Failed to update link");
     } finally {
@@ -176,7 +196,7 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
         body: JSON.stringify({ status: newStatus }),
       });
       if (!res.ok) throw new Error("Status update failed");
-      loadPage(data.page, search || undefined);
+      loadPage(data.page);
     } catch {
       alert("Failed to update link status");
     } finally {
@@ -194,9 +214,21 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
     setLoadingAnalytics(linkId);
 
     try {
-      const res = await fetch(`/api/analytics/${linkId}/stats`);
+      const res = await fetch(`/api/admin/analytics/links/${linkId}/stats`);
       if (res.ok) {
-        const stats = await res.json();
+        const raw = await res.json();
+        // Transform admin format → AnalyticsCharts format
+        const mobileCount = raw.deviceStats?.find((d: any) => d.device?.toLowerCase() === 'mobile')?.count ?? 0;
+        const allDeviceCounts = raw.deviceStats?.reduce((s: number, d: any) => s + d.count, 0) ?? 0;
+        const desktopCount = raw.totalClicks - mobileCount;
+        const stats = {
+          totalClicks: raw.totalClicks,
+          byCountry: (raw.countryStats ?? []).map((c: any) => ({ country: c.country, _count: { country: c.count } })),
+          byDevice: { mobile: mobileCount, desktop: Math.max(0, desktopCount) },
+          byReferrer: (raw.referrerStats ?? []).map((r: any) => ({ referrerDomain: r.referrerDomain, _count: { referrerDomain: r.count } })),
+          overTime: (raw.clicksByDay ?? []).map((d: any) => ({ date: d.date, clicks: d.count })),
+          byCity: [],
+        };
         setAnalyticsData((prev) => ({ ...prev, [linkId]: stats }));
       }
     } catch (e) {
@@ -210,21 +242,22 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
     <div className="space-y-6">
       {/* Search + Refresh */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex flex-1 gap-2">
+        <div className="relative flex-1">
           <Input
             placeholder="Search by slug, destination, title or user..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="h-10"
+            className="h-10 pl-9 pr-9"
           />
-          <Button onClick={handleSearch} disabled={loading} className="h-10">
-            Search
-          </Button>
+          {search && (
+            <button type="button" onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+              ✕
+            </button>
+          )}
         </div>
         <Button
           variant="secondary"
-          onClick={() => loadPage(1, search || undefined)}
+          onClick={() => loadPage(1)}
           disabled={loading}
           className="h-10"
         >
@@ -238,10 +271,12 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50 border-b">
               <tr>
+                <th className="text-left p-3 font-medium w-10">#</th>
                 <th className="text-left p-3 font-medium">Owner</th>
                 <th className="text-left p-3 font-medium">Short URL</th>
                 <th className="text-left p-3 font-medium">Destination</th>
                 <th className="text-left p-3 font-medium">Title</th>
+                <th className="text-left p-3 font-medium">Status</th>
                 <th className="text-right p-3 font-medium">Clicks</th>
                 <th className="text-right p-3 font-medium">Scans</th>
                 <th className="text-left p-3 font-medium">Created</th>
@@ -249,21 +284,22 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
               </tr>
             </thead>
             <tbody>
-              {data.links.length === 0 && (
+              {filteredLinks.length === 0 && (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={10}
                     className="p-8 text-center text-muted-foreground"
                   >
-                    No links found.
+                    {data.links.length === 0 ? 'No links found.' : 'No links match your search.'}
                   </td>
                 </tr>
               )}
 
-              {data.links.map((link) => (
+              {filteredLinks.map((link, idx) => (
                 <Fragment key={link.id}>
                   {/* Main Row */}
                   <tr className="border-b last:border-0 hover:bg-muted/30">
+                    <td className="p-3 text-muted-foreground text-xs tabular-nums">{(data.page - 1) * data.limit + idx + 1}</td>
                     <td className="p-3">
                       <div className="text-xs">
                         {link.user.name || link.user.email}
@@ -284,6 +320,16 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
                       {link.title || "—"}
                     </td>
 
+                    <td className="p-3">
+                      <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+                        link.status === "ACTIVE"
+                          ? "bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-muted text-muted-foreground"
+                      }`}>
+                        {link.status === "ACTIVE" ? "Active" : "Disabled"}
+                      </span>
+                    </td>
+
                     <td className="p-3 text-right font-medium">
                       {link.clickCount}
                     </td>
@@ -297,60 +343,64 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
                     </td>
 
                     <td className="p-3 text-right">
-                      <div className="flex justify-end gap-1.5">
-                        {/* Analytics */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleAnalytics(link.id)}
-                          title="Toggle analytics"
-                          disabled={loadingAnalytics === link.id}
+                      <div className="flex justify-end gap-1">
+                        {/* Copy */}
+                        <button
+                          type="button"
+                          title="Copy short URL"
+                          onClick={() => handleCopy(link.slug)}
+                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
-                          <BarChart3 size={14} />
-
-                          {expandedAnalyticsId === link.id ? (
-                            <ChevronDown size={14} className="ml-1" />
+                          {copiedId === link.slug ? (
+                            <Check size={15} className="text-green-600" />
                           ) : (
-                            <ChevronRight size={14} className="ml-1" />
+                            <Copy size={15} />
                           )}
-                        </Button>
+                        </button>
+
+                        {/* Analytics */}
+                        <button
+                          type="button"
+                          title="Toggle analytics"
+                          onClick={() => toggleAnalytics(link.id)}
+                          disabled={loadingAnalytics === link.id}
+                          className={`rounded-lg p-2 transition-colors hover:bg-muted ${expandedAnalyticsId === link.id ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+                        >
+                          <BarChart3 size={15} />
+                        </button>
 
                         {/* Edit */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditDialog(link)}
+                        <button
+                          type="button"
                           title="Edit link"
+                          onClick={() => openEditDialog(link)}
                           disabled={processingId === link.id}
+                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
-                          Edit
-                        </Button>
+                          <Edit size={15} />
+                        </button>
 
                         {/* Enable / Disable */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                        <button
+                          type="button"
+                          title={link.status === "ACTIVE" ? "Disable link" : "Enable link"}
                           onClick={() => toggleStatus(link)}
                           disabled={processingId === link.id}
-                          title={
-                            link.status === "ACTIVE"
-                              ? "Disable link"
-                              : "Enable link"
-                          }
+                          className={`rounded-lg p-2 transition-colors hover:bg-muted ${link.status === "ACTIVE" ? 'text-muted-foreground hover:text-foreground' : 'text-muted-foreground hover:text-green-600'}`}
                         >
-                          {link.status === "ACTIVE" ? "Disable" : "Enable"}
-                        </Button>
+                          <Power size={15} />
+                        </button>
 
                         {/* Delete */}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-red-600 hover:text-red-700"
+                        <button
+                          type="button"
+                          title="Delete link"
                           onClick={() => openDeleteDialog(link)}
                           disabled={processingId === link.id}
+                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30"
                         >
-                          <Trash2 size={14} />
-                        </Button>
+                          <Trash2 size={15} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -358,7 +408,7 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
                   {/* Inline Analytics Row */}
                   {expandedAnalyticsId === link.id && (
                     <tr>
-                      <td colSpan={8} className="p-0 bg-muted/30">
+                      <td colSpan={10} className="p-0 bg-muted/30">
                         <div className="p-6 border-t">
                           <div className="flex items-center gap-2 mb-4">
                             <BarChart3 size={18} />
@@ -393,29 +443,55 @@ export function AdminLinksClient({ initialData }: { initialData: LinksData }) {
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between text-sm text-muted-foreground">
-        <div>
-          Page {data.page} of {data.totalPages} • {data.total} total links
+      {data.totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm">
+          <p className="text-muted-foreground">
+            Showing {(data.page - 1) * data.limit + 1}–{Math.min(data.page * data.limit, data.total)} of {data.total}
+          </p>
+          <div className="flex items-center gap-1">
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={data.page <= 1 || loading}
+              onClick={() => loadPage(data.page - 1)}
+            >
+              <ChevronLeft size={14} />
+            </Button>
+            {Array.from({ length: Math.min(data.totalPages, 7) }, (_, i) => {
+              let pageNum: number;
+              if (data.totalPages <= 7) {
+                pageNum = i + 1;
+              } else if (data.page <= 4) {
+                pageNum = i + 1;
+              } else if (data.page >= data.totalPages - 3) {
+                pageNum = data.totalPages - 6 + i;
+              } else {
+                pageNum = data.page - 3 + i;
+              }
+              return (
+                <Button
+                  key={pageNum}
+                  size="sm"
+                  variant={data.page === pageNum ? 'primary' : 'secondary'}
+                  disabled={loading}
+                  onClick={() => loadPage(pageNum)}
+                  className="min-w-[32px]"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={data.page >= data.totalPages || loading}
+              onClick={() => loadPage(data.page + 1)}
+            >
+              <ChevronRight size={14} />
+            </Button>
+          </div>
         </div>
-        <div className="space-x-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={data.page <= 1 || loading}
-            onClick={() => loadPage(data.page - 1, search || undefined)}
-          >
-            Prev
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            disabled={data.page >= data.totalPages || loading}
-            onClick={() => loadPage(data.page + 1, search || undefined)}
-          >
-            Next
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Edit Dialog (similar to user dashboard) */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>

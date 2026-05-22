@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BarChart3, Monitor, Smartphone, Globe, MousePointerClick, Scan, ExternalLink } from 'lucide-react';
+import { BarChart3, Monitor, Smartphone, Globe, MousePointerClick, Scan, ExternalLink, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 type AnalyticsData = {
@@ -18,12 +18,16 @@ type AnalyticsData = {
   browserStats: Array<{ browser: string; count: number }>;
   osStats: Array<{ os: string; count: number }>;
   deviceStats: Array<{ device: string; count: number }>;
+  countryStats: Array<{ country: string; count: number }>;
+  referrerStats: Array<{ referrerDomain: string; count: number }>;
+  cityStats: Array<{ city: string; count: number }>;
 };
 
 export function AdminAnalyticsClient({ initialData }: { initialData: AnalyticsData }) {
   const [days, setDays] = useState(30);
   const [data, setData] = useState(initialData);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   async function loadData(d: number) {
     setLoading(true);
@@ -39,10 +43,51 @@ export function AdminAnalyticsClient({ initialData }: { initialData: AnalyticsDa
     }
   }
 
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/admin/analytics/export?days=${days}`);
+      if (!res.ok) return;
+      const rows = await res.json();
+
+      if (rows.length === 0) {
+        return;
+      }
+
+      const headers = Object.keys(rows[0]);
+      const csvLines = [
+        headers.join(','),
+        ...rows.map((row: Record<string, unknown>) =>
+          headers.map((h) => {
+            const val = row[h];
+            if (val === null || val === undefined) return '';
+            const str = String(val);
+            return str.includes(',') || str.includes('"') || str.includes('\n')
+              ? `"${str.replace(/"/g, '""')}"`
+              : str;
+          }).join(','),
+        ),
+      ];
+      const csv = csvLines.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `analytics-export-${days}d-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ignore
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const maxClickDay = Math.max(...data.clicksByDay.map((d) => d.count), 1);
   const maxBrowser = Math.max(...data.browserStats.map((d) => d.count), 1);
   const maxOs = Math.max(...data.osStats.map((d) => d.count), 1);
   const maxDevice = Math.max(...data.deviceStats.map((d) => d.count), 1);
+  const maxCountry = Math.max(...data.countryStats.map((c) => c.count), 1);
 
   return (
     <div className="space-y-8">
@@ -52,6 +97,15 @@ export function AdminAnalyticsClient({ initialData }: { initialData: AnalyticsDa
           <p className="text-muted-foreground">Platform-wide analytics overview</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            <Download size={14} className="mr-1" />
+            {exporting ? 'Exporting...' : 'Export CSV'}
+          </Button>
           {[7, 30, 90].map((d) => (
             <Button
               key={d}
@@ -182,6 +236,64 @@ export function AdminAnalyticsClient({ initialData }: { initialData: AnalyticsDa
                 <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{d.count}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-3">
+        <div className="rounded-lg border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+            <Globe size={14} /> Country
+          </h2>
+          <div className="space-y-2">
+            {data.countryStats.slice(0, 10).map((c) => (
+              <div key={c.country} className="flex items-center gap-2 text-sm">
+                <span className="w-24 truncate text-muted-foreground">{c.country}</span>
+                <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary/60 rounded-full" style={{ width: `${(c.count / maxCountry) * 100}%` }} />
+                </div>
+                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{c.count}</span>
+              </div>
+            ))}
+            {data.countryStats.length === 0 && (
+              <p className="text-sm text-muted-foreground">No country data.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Referrer</h2>
+          <div className="space-y-2">
+            {data.referrerStats.slice(0, 10).map((r) => (
+              <div key={r.referrerDomain} className="flex items-center gap-2 text-sm">
+                <span className="w-24 truncate text-muted-foreground">{r.referrerDomain}</span>
+                <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary/60 rounded-full" style={{ width: `${(r.count / maxCountry) * 100}%` }} />
+                </div>
+                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{r.count}</span>
+              </div>
+            ))}
+            {data.referrerStats.length === 0 && (
+              <p className="text-sm text-muted-foreground">No referrer data.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-5">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">City</h2>
+          <div className="space-y-2">
+            {data.cityStats.slice(0, 10).map((c) => (
+              <div key={c.city} className="flex items-center gap-2 text-sm">
+                <span className="w-24 truncate text-muted-foreground">{c.city}</span>
+                <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-primary/60 rounded-full" style={{ width: `${(c.count / maxCountry) * 100}%` }} />
+                </div>
+                <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">{c.count}</span>
+              </div>
+            ))}
+            {data.cityStats.length === 0 && (
+              <p className="text-sm text-muted-foreground">No city data.</p>
+            )}
           </div>
         </div>
       </div>

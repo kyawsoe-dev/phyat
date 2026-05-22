@@ -58,6 +58,12 @@ export class AdminController {
     return this.admin.disable2fa(user.id, password);
   }
 
+  @Post('users')
+  @ApiOperation({ summary: 'Create a new user' })
+  createUser(@Body() data: { email: string; name?: string; password?: string; tierCode?: string; isAdmin?: boolean }) {
+    return this.admin.createUser(data);
+  }
+
   @Get('users')
   @ApiOperation({ summary: 'List all users with pagination' })
   getUsers(
@@ -121,10 +127,38 @@ export class AdminController {
     return this.admin.updateLink(id, data);
   }
 
+  @Get('users/:id/analytics')
+  @ApiOperation({ summary: 'Get per-user aggregated analytics' })
+  getUserAnalytics(@Param('id') id: string) {
+    return this.admin.getUserAnalytics(id);
+  }
+
+  @Get('analytics/links/:id')
+  @ApiOperation({ summary: 'Get per-link click list (admin bypass)' })
+  getLinkAnalytics(
+    @Param('id') id: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '50',
+  ) {
+    return this.admin.getLinkAnalytics(id, Number(page), Number(limit));
+  }
+
+  @Get('analytics/links/:id/stats')
+  @ApiOperation({ summary: 'Get per-link stats (admin bypass)' })
+  getLinkAnalyticsStats(@Param('id') id: string) {
+    return this.admin.getLinkAnalyticsStats(id);
+  }
+
   @Get('analytics')
   @ApiOperation({ summary: 'Get admin-level analytics' })
   getAnalytics(@Query('days') days = '30') {
     return this.admin.getAdminAnalytics(Number(days));
+  }
+
+  @Get('analytics/export')
+  @ApiOperation({ summary: 'Export analytics data as JSON (CSV-ready)' })
+  exportAnalytics(@Query('days') days = '30') {
+    return this.admin.exportAnalytics(Number(days));
   }
 
   @Get('tiers')

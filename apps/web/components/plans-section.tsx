@@ -2,10 +2,18 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Check, Sparkles, Zap, Code2, Loader2 } from "lucide-react";
+import { Check, Sparkles, Zap, Code2, Loader2, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type Plan = {
   code: "FREE" | "PRO" | "DEVELOPER";
@@ -34,6 +42,7 @@ export function PlansSection({ user }: { user?: UserLike }) {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [checkoutCode, setCheckoutCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<Plan | null>(null);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const hasFetchedPendingRef = useRef(false);
 
@@ -136,7 +145,7 @@ export function PlansSection({ user }: { user?: UserLike }) {
 
         {/* Pending request banner - exactly matching user dashboard plans page */}
         {user && pendingRequests.length > 0 && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-4 text-sm max-w-2xl mx-auto">
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-4 text-sm mx-auto">
             <div className="font-medium text-amber-800 dark:text-amber-300">
               Upgrade request pending
             </div>
@@ -204,7 +213,13 @@ export function PlansSection({ user }: { user?: UserLike }) {
                   </div>
 
                   <div className={cn("p-7 pt-0", isPopular && "pb-8")}>
-                     <Button type="button" className="w-full" variant="secondary" disabled={isLoading || isCurrent || (hasPending && user)} onClick={() => choosePlan(plan)}>
+                      <Button type="button" className="w-full" variant="secondary" disabled={isLoading || isCurrent || (hasPending && !!user)} onClick={() => {
+                        if (!user || !user.tier) {
+                          choosePlan(plan);
+                        } else {
+                          setConfirmPlan(plan);
+                        }
+                      }}>
                        {isLoading ? (
                          <><Loader2 size={16} className="animate-spin" /> Submitting...</>
                        ) : isCurrent ? (
@@ -228,6 +243,40 @@ export function PlansSection({ user }: { user?: UserLike }) {
           </div>
         )}
       </div>
+
+      {/* Upgrade Confirmation Dialog */}
+      <Dialog open={!!confirmPlan} onOpenChange={(open) => { if (!open) setConfirmPlan(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle size={18} className="text-amber-500" />
+              Confirm Upgrade Request
+            </DialogTitle>
+            <DialogDescription>
+              You are about to request an upgrade to{" "}
+              <strong>{confirmPlan?.name}</strong> (
+              {confirmPlan ? billing === "ANNUAL" ? confirmPlan.annualPriceLabel : confirmPlan.monthlyPriceLabel : ""}
+              ).
+              This will be reviewed by an admin. Do you wish to proceed?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="secondary" onClick={() => setConfirmPlan(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const p = confirmPlan;
+                setConfirmPlan(null);
+                if (p) choosePlan(p);
+              }}
+            >
+              Confirm Upgrade
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

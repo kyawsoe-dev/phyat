@@ -48,10 +48,15 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  async function loadPage(page: number, s?: string, st?: string) {
+  // Client-side filtered invoices (search by user email)
+  const filteredInvoices = data.invoices.filter((inv) =>
+    !search || (inv.user?.email || '').toLowerCase().includes(search.toLowerCase()) ||
+    (inv.user?.name || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  async function loadPage(page: number, st?: string) {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: '20' });
-    if (s) params.set('search', s);
     if (st) params.set('status', st);
     try {
       const res = await fetch(`/api/admin/invoices?${params}`);
@@ -80,7 +85,7 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
       });
       setShowCreate(false);
       setCreateForm({ userId: '', amount: 0, description: '' });
-      loadPage(1, search, statusFilter || undefined);
+      loadPage(1, statusFilter || undefined);
     } catch {
       setErrorMessage('Create failed');
       setErrorDialogOpen(true);
@@ -109,7 +114,7 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
         }),
       });
       setEditId(null);
-      loadPage(data.page, search, statusFilter || undefined);
+      loadPage(data.page, statusFilter || undefined);
     } catch {
       setErrorMessage('Update failed');
       setErrorDialogOpen(true);
@@ -126,7 +131,7 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
     setDeleteDialogOpen(false);
     try {
       await fetch(`/api/admin/invoices/${deleteId}`, { method: 'DELETE' });
-      loadPage(data.page, search, statusFilter || undefined);
+      loadPage(data.page, statusFilter || undefined);
     } catch {
       setErrorMessage('Delete failed');
       setErrorDialogOpen(true);
@@ -141,7 +146,7 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ status: 'PAID', paidAt: new Date().toISOString() }),
       });
-      loadPage(data.page, search, statusFilter || undefined);
+      loadPage(data.page, statusFilter || undefined);
     } catch {
       setErrorMessage('Failed');
       setErrorDialogOpen(true);
@@ -175,20 +180,25 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Input
-          placeholder="Search by user email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') loadPage(1, search, statusFilter || undefined); }}
-          className="max-w-xs"
-        />
-        <Button onClick={() => loadPage(1, search, statusFilter || undefined)} disabled={loading}>Search</Button>
-        {['', 'PAID', 'UNPAID', 'CANCELLED', 'REFUNDED'].map((s) => (
-          <Button key={s} variant={statusFilter === s ? 'secondary' : 'ghost'} size="sm" onClick={() => { setStatusFilter(s); loadPage(1, search, s || undefined); }}>
-            {s || 'All'}
-          </Button>
-        ))}
+      <div className="flex gap-2 items-center">
+        <div className="relative flex-1 max-w-xs">
+          <Input
+            placeholder="Search by user email or name..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={e => { setStatusFilter(e.target.value); loadPage(1, e.target.value || undefined); }}
+          className="h-10 rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option value="">All Statuses</option>
+          <option value="PAID">PAID</option>
+          <option value="UNPAID">UNPAID</option>
+          <option value="CANCELLED">CANCELLED</option>
+          <option value="REFUNDED">REFUNDED</option>
+        </select>
       </div>
 
       <div className="rounded-lg border bg-card overflow-hidden">
@@ -204,8 +214,8 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
             </tr>
           </thead>
           <tbody>
-            {data.invoices.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No invoices.</td></tr>}
-            {data.invoices.map((inv) => (
+            {filteredInvoices.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">No invoices.</td></tr>}
+            {filteredInvoices.map((inv) => (
               <tr key={inv.id} className="border-t">
                 <td className="p-3 text-xs">{inv.user?.email || inv.userId}</td>
                 <td className="p-3 font-mono">${(inv.amount / 100).toFixed(2)}</td>
@@ -248,8 +258,8 @@ export function AdminInvoicesClient({ initialData }: { initialData: InvoicesData
       <div className="text-sm flex justify-between text-muted-foreground">
         <span>Page {data.page} / {data.totalPages} • Total {data.total}</span>
         <div>
-          <Button size="sm" variant="secondary" disabled={data.page <= 1} onClick={() => loadPage(data.page - 1, search, statusFilter || undefined)}>←</Button>
-          <Button size="sm" variant="secondary" disabled={data.page >= data.totalPages} onClick={() => loadPage(data.page + 1, search, statusFilter || undefined)} className="ml-1">→</Button>
+          <Button size="sm" variant="secondary" disabled={data.page <= 1} onClick={() => loadPage(data.page - 1, statusFilter || undefined)}>←</Button>
+          <Button size="sm" variant="secondary" disabled={data.page >= data.totalPages} onClick={() => loadPage(data.page + 1, statusFilter || undefined)} className="ml-1">→</Button>
         </div>
       </div>
 

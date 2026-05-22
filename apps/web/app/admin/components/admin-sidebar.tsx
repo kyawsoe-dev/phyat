@@ -31,10 +31,10 @@ import { Button } from '@/components/ui/button';
 
 export const adminNavItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/links', label: 'Links', icon: LinkIcon },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/tiers', label: 'Tiers', icon: Layers },
-  { href: '/admin/links', label: 'Links', icon: LinkIcon },
   { href: '/admin/invoices', label: 'Invoices', icon: FileText },
   { href: '/admin/upgrade-requests', label: 'Requests', icon: ArrowUp },
   { href: '/admin/settings', label: 'Settings', icon: Settings },

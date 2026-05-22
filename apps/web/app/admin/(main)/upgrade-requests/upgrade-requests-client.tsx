@@ -151,27 +151,27 @@ export function AdminUpgradeRequestsClient({ initialData }: { initialData: Reque
         </Button>
       </div>
 
-      {/* Search + Status filters with equal height */}
+      {/* Search + Status filters */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
-        <Input
-          placeholder="Search by email or name..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="h-10 w-full sm:w-64"
-        />
-
-        <div className="flex gap-2">
-          {['', 'PENDING', 'APPROVED', 'DENIED'].map((s) => (
-            <Button
-              key={s || 'all'}
-              variant={statusFilter === s ? 'secondary' : 'ghost'}
-              className="h-10 px-4 text-sm"
-              onClick={() => handleFilterChange(s)}
-            >
-              {s || 'All'}
-            </Button>
-          ))}
+        <div className="relative flex-1 max-w-xs">
+          <Input
+            placeholder="Search by email or name..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-10"
+          />
         </div>
+
+        <select
+          value={statusFilter}
+          onChange={e => handleFilterChange(e.target.value)}
+          className="h-10 rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          <option value="">All Statuses</option>
+          <option value="PENDING">PENDING</option>
+          <option value="APPROVED">APPROVED</option>
+          <option value="DENIED">DENIED</option>
+        </select>
       </div>
 
       <div className="rounded-lg border border-border bg-card overflow-hidden">

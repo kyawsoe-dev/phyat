@@ -12,10 +12,19 @@ import {
   Zap,
   Code2,
   Percent,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type Plan = {
   code: string;
@@ -66,6 +75,7 @@ export default function PlansPage() {
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [upgradingCode, setUpgradingCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<Plan | null>(null);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [loadingPending, setLoadingPending] = useState(true);
   const autoCheckoutKey = useRef<string | null>(null);
@@ -410,8 +420,8 @@ export default function PlansPage() {
                  <Button
                    className="w-full"
                    variant={current ? "secondary" : "primary"}
-                   disabled={current || loading || hasPending}
-                   onClick={() => requestUpgrade(plan.code)}
+                    disabled={current || loading || hasPending}
+                    onClick={() => setConfirmPlan(plan)}
                  >
                    {loading ? (
                      <>
@@ -508,6 +518,40 @@ export default function PlansPage() {
             </>
           )}
           {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
+
+      {/* Upgrade Confirmation Dialog */}
+      <Dialog open={!!confirmPlan} onOpenChange={(open) => { if (!open) setConfirmPlan(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle size={18} className="text-amber-500" />
+              Confirm Upgrade Request
+            </DialogTitle>
+            <DialogDescription>
+              You are about to request an upgrade to{" "}
+              <strong>{confirmPlan?.name}</strong> (
+              {confirmPlan ? billing === "ANNUAL" ? confirmPlan.annualPriceLabel : confirmPlan.monthlyPriceLabel : ""}
+              ).
+              This will be reviewed by an admin. Do you wish to proceed?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="secondary" onClick={() => setConfirmPlan(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                const code = confirmPlan?.code;
+                setConfirmPlan(null);
+                if (code) requestUpgrade(code);
+              }}
+            >
+              Confirm Upgrade
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
           {subscription && subscription.billingCycle && (
             <div className="mt-3 rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
               Current plan:{" "}
