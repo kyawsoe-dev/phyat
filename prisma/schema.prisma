@@ -95,6 +95,8 @@ model User {
   admin2faEnabled Boolean @default(false) @map("admin_2fa_enabled")
   user2faSecret  String? @map("user_2fa_secret")
   user2faEnabled Boolean @default(false) @map("user_2fa_enabled")
+  loginAttempts Int      @default(0) @map("login_attempts")
+  lockedUntil   DateTime? @map("locked_until")
   tierId       String   @map("tier_id")
   tier         Tier     @relation(fields: [tierId], references: [id], onDelete: Restrict)
   links        Link[]

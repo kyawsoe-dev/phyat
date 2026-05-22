@@ -25,7 +25,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const exceptionResponse = exception.getResponse();
       message = typeof exceptionResponse === 'string' ? exceptionResponse : (exceptionResponse as { message?: string }).message || 'Error';
     } else if (exception instanceof Error) {
-      message = exception.message;
+      message = 'Internal server error';
     }
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {

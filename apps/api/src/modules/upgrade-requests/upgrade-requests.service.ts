@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { TierCode } from '@prisma/client';
 import { PrismaService } from '../../common/prisma.service';
 import { SubscriptionsService } from '../subscriptions/application/subscriptions.service';
 import { InvoiceService } from '../invoices/invoice.service';
@@ -12,7 +13,10 @@ export class UpgradeRequestsService {
   ) {}
 
   async create(userId: string, tierCode: string) {
-    const tier = await this.prisma.tier.findUnique({ where: { code: tierCode as any } });
+    if (!Object.values(TierCode).includes(tierCode as TierCode)) {
+      throw new BadRequestException('Invalid tier code.');
+    }
+    const tier = await this.prisma.tier.findUnique({ where: { code: tierCode as TierCode } });
     if (!tier || !tier.isActive) {
       throw new NotFoundException('Tier not found.');
     }

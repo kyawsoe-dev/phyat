@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Post,
   Put,
   Query,
@@ -15,6 +16,36 @@ import { AdminGuard } from '../../common/auth/admin.guard';
 import { CurrentUser } from '../../common/auth/current-user.decorator';
 import { AuthenticatedUser } from '../../common/auth/authenticated-user';
 import { AdminService } from './admin.service';
+import { IsEmail, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+
+class AdminCreateUserDto {
+  @IsEmail()
+  email!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  password?: string;
+
+  @IsOptional()
+  @IsString()
+  tierCode?: string;
+}
+
+class AdminUpdateUserDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  tierCode?: string;
+}
 
 @ApiTags('admin')
 @Controller('admin')
@@ -59,20 +90,20 @@ export class AdminController {
   }
 
   @Post('users')
-  @ApiOperation({ summary: 'Create a new user' })
-  createUser(@Body() data: { email: string; name?: string; password?: string; tierCode?: string; isAdmin?: boolean }) {
-    return this.admin.createUser(data);
+  @ApiOperation({ summary: 'Create a new user (non-admin by default)' })
+  createUser(@Body() data: AdminCreateUserDto) {
+    return this.admin.createUser({ ...data, isAdmin: false });
   }
 
   @Get('users')
   @ApiOperation({ summary: 'List all users with pagination' })
   getUsers(
-    @Query('page') page = '1',
-    @Query('limit') limit = '20',
+    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit = 20,
     @Query('search') search?: string,
     @Query('tier') tier?: string,
   ) {
-    return this.admin.getUsers(Number(page), Number(limit), search, tier);
+    return this.admin.getUsers(page, limit, search, tier);
   }
 
   @Get('users/:id')
@@ -82,10 +113,10 @@ export class AdminController {
   }
 
   @Put('users/:id')
-  @ApiOperation({ summary: 'Update user (name, tier, admin status)' })
+  @ApiOperation({ summary: 'Update user (name, tier)' })
   updateUser(
     @Param('id') id: string,
-    @Body() data: { name?: string; tierCode?: string; isAdmin?: boolean },
+    @Body() data: AdminUpdateUserDto,
   ) {
     return this.admin.updateUser(id, data);
   }
@@ -99,11 +130,11 @@ export class AdminController {
   @Get('links')
   @ApiOperation({ summary: 'List all links with pagination' })
   getLinks(
-    @Query('page') page = '1',
-    @Query('limit') limit = '20',
+    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit = 20,
     @Query('search') search?: string,
   ) {
-    return this.admin.getAllLinks(Number(page), Number(limit), search);
+    return this.admin.getAllLinks(page, limit, search);
   }
 
   @Delete('links/:id')
@@ -137,10 +168,10 @@ export class AdminController {
   @ApiOperation({ summary: 'Get per-link click list (admin bypass)' })
   getLinkAnalytics(
     @Param('id') id: string,
-    @Query('page') page = '1',
-    @Query('limit') limit = '50',
+    @Query('page', new ParseIntPipe({ optional: true })) page = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit = 50,
   ) {
-    return this.admin.getLinkAnalytics(id, Number(page), Number(limit));
+    return this.admin.getLinkAnalytics(id, page, limit);
   }
 
   @Get('analytics/links/:id/stats')
@@ -151,14 +182,14 @@ export class AdminController {
 
   @Get('analytics')
   @ApiOperation({ summary: 'Get admin-level analytics' })
-  getAnalytics(@Query('days') days = '30') {
-    return this.admin.getAdminAnalytics(Number(days));
+  getAnalytics(@Query('days', new ParseIntPipe({ optional: true })) days = 30) {
+    return this.admin.getAdminAnalytics(days);
   }
 
   @Get('analytics/export')
   @ApiOperation({ summary: 'Export analytics data as JSON (CSV-ready)' })
-  exportAnalytics(@Query('days') days = '30') {
-    return this.admin.exportAnalytics(Number(days));
+  exportAnalytics(@Query('days', new ParseIntPipe({ optional: true })) days = 30) {
+    return this.admin.exportAnalytics(days);
   }
 
   @Get('tiers')

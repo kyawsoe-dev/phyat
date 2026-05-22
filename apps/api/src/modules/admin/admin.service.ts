@@ -305,9 +305,8 @@ export class AdminService {
     if (data.password) {
       createData.passwordHash = await bcrypt.hash(data.password, 10);
     }
-    if (data.isAdmin !== undefined) {
-      createData.isAdmin = data.isAdmin;
-    }
+    // isAdmin is always explicitly passed from the controller (default false), never from user input
+    createData.isAdmin = data.isAdmin ?? false;
 
     return this.prisma.user.create({
       data: createData as any,
@@ -353,7 +352,7 @@ export class AdminService {
     };
   }
 
-  async updateUser(id: string, data: { name?: string; tierCode?: string; isAdmin?: boolean }) {
+  async updateUser(id: string, data: { name?: string; tierCode?: string }) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) {
       throw new NotFoundException('User not found.');
@@ -361,7 +360,6 @@ export class AdminService {
 
     const updateData: Record<string, unknown> = {};
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.isAdmin !== undefined) updateData.isAdmin = data.isAdmin;
 
     if (data.tierCode) {
       const tier = await this.prisma.tier.findUnique({ where: { code: data.tierCode as TierCode } });
@@ -673,11 +671,13 @@ export class AdminService {
   }
 
   async exportAnalytics(days: number) {
-    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const safeDays = Math.min(Math.max(days, 1), 365);
+    const since = new Date(Date.now() - safeDays * 24 * 60 * 60 * 1000);
 
     const clicks = await this.prisma.analytics.findMany({
       where: { eventType: 'CLICK', clickedAt: { gte: since } },
       orderBy: { clickedAt: 'desc' },
+      take: 10000,
       include: {
         link: { select: { slug: true, destination: true, user: { select: { email: true } } } },
       },

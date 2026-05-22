@@ -72,6 +72,7 @@ export class WebhooksService {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-phyat-event': event, 'x-phyat-signature': signature },
         body,
+        signal: AbortSignal.timeout(5000),
       });
       await this.prisma.webhookDelivery.update({
         where: { id: delivery.id },

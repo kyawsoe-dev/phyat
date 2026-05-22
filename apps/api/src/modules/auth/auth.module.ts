@@ -12,7 +12,11 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') ?? 'dev-secret-change-me',
+        secret: (() => {
+          const s = config.get<string>('JWT_SECRET');
+          if (!s) throw new Error('JWT_SECRET environment variable is required');
+          return s;
+        })(),
         signOptions: { expiresIn: '7d' },
       }),
     }),

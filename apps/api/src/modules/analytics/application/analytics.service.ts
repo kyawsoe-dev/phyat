@@ -19,6 +19,7 @@ export class AnalyticsService {
   private readonly logger = new Logger(AnalyticsService.name);
   private readonly geoCache = new Map<string, CacheEntry>();
   private readonly geoCacheTtlMs = 3_600_000;
+  private readonly geoCacheMaxSize = 10_000;
 
   constructor(private readonly analytics: AnalyticsRepository) {}
 
@@ -135,6 +136,10 @@ export class AnalyticsService {
         city: data.city || "Yangon",
       };
 
+      if (this.geoCache.size >= this.geoCacheMaxSize) {
+        const oldest = this.geoCache.entries().next().value;
+        if (oldest) this.geoCache.delete(oldest[0]);
+      }
       this.geoCache.set(ip, {
         value: result,
         expiresAt: Date.now() + this.geoCacheTtlMs,

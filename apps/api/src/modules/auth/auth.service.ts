@@ -72,22 +72,41 @@ export class AuthService {
   async login(input: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: input.email.toLowerCase() },
-      select: { id: true, email: true, name: true, user2faEnabled: true, admin2faEnabled: true, createdAt: true, passwordHash: true, tier: { select: TIER_SELECT } },
-    });
+      select: { id: true, email: true, name: true, user2faEnabled: true, admin2faEnabled: true, createdAt: true, passwordHash: true, loginAttempts: true, lockedUntil: true, tier: { select: TIER_SELECT } } as any,
+    }) as any;
+
+    if (user?.lockedUntil && user.lockedUntil > new Date()) {
+      const remaining = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 1000);
+      throw new UnauthorizedException(`Account is temporarily locked. Try again in ${remaining} seconds.`);
+    }
 
     if (!user || !user.passwordHash || !(await bcrypt.compare(input.password, user.passwordHash))) {
+      // Increment failed attempts and potentially lock account
+      if (user) {
+        const attempts = user.loginAttempts + 1;
+        const updateData: Record<string, unknown> = { loginAttempts: attempts };
+        if (attempts >= 5) {
+          updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
+          updateData.loginAttempts = 0;
+        }
+        await this.prisma.user.update({ where: { id: user.id }, data: updateData as any });
+      }
       throw new UnauthorizedException('Invalid email or password.');
     }
 
+    // Reset failed attempts on successful login
+    await this.prisma.user.update({ where: { id: user.id }, data: { loginAttempts: 0, lockedUntil: null } as any });
+
+    const userForSession = { id: user.id, email: user.email, name: user.name, tier: user.tier };
     if (user.user2faEnabled) {
-      return this.tempSession(user);
+      return this.tempSession(userForSession);
     }
 
     if (user.admin2faEnabled) {
-      return this.tempSession(user, 'admin');
+      return this.tempSession(userForSession, 'admin');
     }
 
-    return this.fullSession(user);
+    return this.fullSession(userForSession);
   }
 
   async googleLogin(input: GoogleLoginDto) {
@@ -148,9 +167,10 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, input: UpdateProfileDto) {
+    const sanitized = input.name ? input.name.replace(/<[^>]*>/g, '').trim() : input.name;
     return this.prisma.user.update({
       where: { id: userId },
-      data: { name: input.name },
+      data: { name: sanitized || null },
       select: { id: true, email: true, name: true, createdAt: true },
     });
   }

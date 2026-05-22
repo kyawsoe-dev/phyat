@@ -28,28 +28,33 @@ export class CampaignRepository {
       },
     });
 
-    const enriched = await Promise.all(
-      campaigns.map(async (c) => {
-        const totalClicks = await this.prisma.analytics.count({
-          where: { link: { campaignId: c.id } },
-        });
-        return {
-          id: c.id,
-          userId: c.userId,
-          name: c.name,
-          description: c.description,
-          clickGoal: c.clickGoal,
-          startDate: c.startDate,
-          endDate: c.endDate,
-          createdAt: c.createdAt,
-          updatedAt: c.updatedAt,
-          linkCount: c._count.links,
-          totalClicks,
-        };
-      }),
-    );
+    if (campaigns.length === 0) return [];
 
-    return enriched;
+    // Batch all click counts in a single raw query
+    const campaignIds = campaigns.map((c) => c.id);
+    type ClickRow = { campaign_id: string; count: bigint };
+    const clickRows = await this.prisma.$queryRawUnsafe<ClickRow[]>(
+      `SELECT l.campaign_id, COUNT(*)::int as count FROM analytics a JOIN links l ON l.id = a.link_id WHERE l.campaign_id = ANY($1) GROUP BY l.campaign_id`,
+      campaignIds,
+    );
+    const clickCountByCampaign = new Map<string, number>();
+    for (const row of clickRows) {
+      clickCountByCampaign.set(row.campaign_id, Number(row.count));
+    }
+
+    return campaigns.map((c) => ({
+      id: c.id,
+      userId: c.userId,
+      name: c.name,
+      description: c.description,
+      clickGoal: c.clickGoal,
+      startDate: c.startDate,
+      endDate: c.endDate,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      linkCount: c._count.links,
+      totalClicks: clickCountByCampaign.get(c.id) ?? 0,
+    }));
   }
 
   async findById(id: string, userId: string) {
