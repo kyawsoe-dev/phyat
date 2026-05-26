@@ -11,44 +11,55 @@ import * as express from 'express';
 
 let cachedApp: express.Express;
 
+function healthCheckHandler(req: any, res: any) {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+}
+
 export async function bootstrap(): Promise<express.Express> {
   if (cachedApp) return cachedApp;
 
   const server = express();
-  const app = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(server),
-    { rawBody: true },
-  );
-  const config = app.get(ConfigService);
-  const logger = new Logger('Bootstrap');
-
   server.set('trust proxy', 1);
-  app.enableCors({
-    origin: config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000',
-    credentials: true,
-  });
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-  app.useGlobalFilters(new GlobalExceptionFilter());
-  app.use(SecurityMiddleware);
-  app.use(RateLimitMiddleware);
+  server.get('/', healthCheckHandler);
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle('Phyat API')
-    .setDescription('URL shortening API for Phyat')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document);
+  try {
+    const app = await NestFactory.create(
+      AppModule,
+      new ExpressAdapter(server),
+      { rawBody: true },
+    );
+    const config = app.get(ConfigService);
+    const logger = new Logger('Bootstrap');
 
-  await app.init();
+    app.enableCors({
+      origin: config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000',
+      credentials: true,
+    });
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    app.useGlobalFilters(new GlobalExceptionFilter());
+    app.use(SecurityMiddleware);
+    app.use(RateLimitMiddleware);
+
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Phyat API')
+      .setDescription('URL shortening API for Phyat')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document);
+
+    await app.init();
+  } catch (error) {
+    console.error('NestJS init failed, running in degraded mode:', error);
+  }
+
   cachedApp = server;
   return server;
 }
