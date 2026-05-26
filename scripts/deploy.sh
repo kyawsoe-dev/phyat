@@ -13,7 +13,6 @@ fi
 echo "=== Deploying Web (Next.js) ==="
 npx vercel deploy apps/web \
   --project phyat-web \
-  --token "$VERCEL_TOKEN" \
   $FLAG \
   --yes
 
@@ -21,7 +20,6 @@ echo ""
 echo "=== Deploying API (NestJS) ==="
 npx vercel deploy apps/api \
   --project phyat-api \
-  --token "$VERCEL_TOKEN" \
   $FLAG \
   --yes
 
