@@ -10,6 +10,10 @@ if [ "$MODE" = "production" ]; then
   FLAG="--prod"
 fi
 
+echo "=== Building API (NestJS) ==="
+npm --workspace=@phyat/api run build
+
+echo ""
 echo "=== Deploying Web (Next.js) ==="
 npx vercel deploy apps/web \
   --project phyat-web \
