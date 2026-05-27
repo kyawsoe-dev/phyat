@@ -14,6 +14,6 @@ import { UpgradeRequestsModule } from './modules/upgrade-requests/upgrade-reques
 import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), AdminModule, AnalyticsModule, AuthModule, ApiKeyModule, CampaignsModule, DomainsModule, InvoiceModule, LinksModule, QrCodesModule, SubscriptionsModule, UpgradeRequestsModule, WebhooksModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../.env', '../../.env'] }), AdminModule, AnalyticsModule, AuthModule, ApiKeyModule, CampaignsModule, DomainsModule, InvoiceModule, LinksModule, QrCodesModule, SubscriptionsModule, UpgradeRequestsModule, WebhooksModule],
 })
 export class AppModule {}
