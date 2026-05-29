@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRight, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
 const sections = [
   { id: 'introduction', label: 'Introduction' },
@@ -64,9 +64,7 @@ export function DocsSidebar({ open, onToggle, onClose }: { open: boolean; onTogg
         <a href="/dashboard/settings" onClick={onClose} className="block rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
           API Keys
         </a>
-        <a href="http://localhost:4000/api/docs" target="_blank" rel="noopener noreferrer" onClick={onClose} className="block rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-          Swagger UI <ArrowRight size={12} className="inline" />
-        </a>
+
       </div>
     </nav>
   );

@@ -24,7 +24,7 @@ export function PasswordForm({
 
     startTransition(async () => {
       const baseUrl =
-        process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+        process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://phyat-api.vercel.app";
       const params = new URLSearchParams();
       params.set("shortHost", shortHost);
       const response = await fetch(

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export default async function DocsPage() {
-  const baseUrl = 'http://localhost:4000';
+  const baseUrl = 'https://phyat-api.vercel.app';
 
   return (
     <div className="min-h-screen bg-background">
@@ -174,7 +174,7 @@ export default async function DocsPage() {
 {`{
   "id": "clx...",
   "slug": "launch",
-  "shortUrl": "http://localhost:3000/launch",
+  "shortUrl": "https://phyat-web.vercel.app/launch",
   "destination": "https://example.com/launch",
   "title": "Launch page",
   "expiresAt": "2025-12-31T23:59:59.000Z",
