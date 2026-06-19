@@ -10,9 +10,6 @@ if [ "$MODE" = "production" ]; then
   FLAG="--prod"
 fi
 
-echo "=== Syncing prisma schema for API ==="
-cp -r prisma apps/api/prisma
-
 echo "=== Building API (NestJS) ==="
 npm --workspace=@phyat/api run build
 
