@@ -146,24 +146,41 @@ export function PlansSection({ user }: { user?: UserLike }) {
         {/* Pending request banner - exactly matching user dashboard plans page */}
         {user && pendingRequests.length > 0 && (
           <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-950/30 p-4 text-sm mx-auto">
-            <div className="font-medium text-amber-800 dark:text-amber-300">
-              Upgrade request pending
-            </div>
-            <div className="text-amber-700 dark:text-amber-400 mt-1">
-              You have a pending request for <strong>{pendingRequests[0].tier?.name || "a higher plan"}</strong>.
-              An admin will review it shortly. You cannot request another plan until this is processed.
-            </div>
-            <div className="text-xs mt-2 text-amber-600 dark:text-amber-500">
-              Submitted: {new Date(pendingRequests[0].createdAt).toLocaleDateString()}
-            </div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <div className="font-medium text-amber-800 dark:text-amber-300">
+                  Upgrade request pending
+                </div>
+                <div className="text-amber-700 dark:text-amber-400 mt-1">
+                  You have a pending request for <strong>{pendingRequests[0].tier?.name || "a higher plan"}</strong>.
+                  An admin will review it shortly. You cannot request another plan until this is processed.
+                </div>
+                <div className="text-xs mt-2 text-amber-600 dark:text-amber-500">
+                  Submitted: {new Date(pendingRequests[0].createdAt).toLocaleDateString()}
+                </div>
 
-            {/* Admin contact for payment (manual upgrade) */}
-            <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-900/50 text-xs text-amber-700 dark:text-amber-400">
-              For payment, please contact:
-              <div className="mt-1">
-                Phone: <a href="tel:+959455637738" className="underline hover:no-underline">+959455637738</a><br />
-                Email: <a href="mailto:kyawsoedeveloper@gmail.com" className="underline hover:no-underline">kyawsoedeveloper@gmail.com</a>
+                {/* Admin contact for payment (manual upgrade) */}
+                <div className="mt-3 pt-3 border-t border-amber-200 dark:border-amber-900/50 text-xs text-amber-700 dark:text-amber-400">
+                  For payment, please contact:
+                  <div className="mt-1">
+                    Phone: <a href="tel:+959455637738" className="underline hover:no-underline">+959455637738</a><br />
+                    Email: <a href="mailto:kyawsoedeveloper@gmail.com" className="underline hover:no-underline">kyawsoedeveloper@gmail.com</a>
+                  </div>
+                </div>
               </div>
+              <button
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`/api/upgrade-requests/${pendingRequests[0].id}/cancel`, { method: 'PUT' });
+                    if (res.ok) {
+                      setPendingRequests([]);
+                    }
+                  } catch {}
+                }}
+                className="shrink-0 rounded-lg border border-amber-300 dark:border-amber-700 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors"
+              >
+                Cancel request
+              </button>
             </div>
           </div>
         )}

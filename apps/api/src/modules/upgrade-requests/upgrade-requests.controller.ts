@@ -36,6 +36,13 @@ export class UpgradeRequestsController {
     return this.requests.getAllRequests(Number(page), Number(limit), status);
   }
 
+  @Put('upgrade-requests/:id/cancel')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Cancel your own pending upgrade request' })
+  cancel(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.requests.cancel(user.id, id);
+  }
+
   @Put('admin/upgrade-requests/:id/approve')
   @UseGuards(JwtAuthGuard, AdminGuard)
   @ApiOperation({ summary: 'Approve an upgrade request' })

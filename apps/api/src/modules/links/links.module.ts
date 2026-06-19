@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
 import { ApiKeyModule } from '../api-keys/api-key.module';
 import { AnalyticsService } from '../analytics/application/analytics.service';
 import { AnalyticsRepository } from '../analytics/infrastructure/analytics.repository';
@@ -26,7 +25,6 @@ import { ShortenApiController } from './interfaces/shorten-api.controller';
     CacheService,
     LinkRepository,
     LinksService,
-    PrismaService,
     RedirectService,
     SlugService,
     TierLimitGuard,

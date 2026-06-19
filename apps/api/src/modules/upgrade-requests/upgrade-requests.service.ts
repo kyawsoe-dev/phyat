@@ -94,6 +94,20 @@ export class UpgradeRequestsService {
     });
   }
 
+  async cancel(userId: string, id: string) {
+    const request = await this.prisma.upgradeRequest.findUnique({ where: { id } });
+    if (!request) throw new NotFoundException('Request not found.');
+    if (request.userId !== userId) throw new NotFoundException('Request not found.');
+    if (request.status !== 'PENDING') {
+      throw new BadRequestException('Request has already been processed.');
+    }
+
+    return this.prisma.upgradeRequest.update({
+      where: { id },
+      data: { status: 'DENIED', adminNote: 'Cancelled by user' },
+    });
+  }
+
   async deny(id: string, note?: string) {
     const request = await this.prisma.upgradeRequest.findUnique({ where: { id } });
     if (!request) throw new NotFoundException('Request not found.');

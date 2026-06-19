@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthModule } from '../auth/auth.module';
 import { ApiKeyController } from './api-key.controller';
@@ -11,7 +10,7 @@ import { UsageService } from '../subscriptions/application/usage.service';
 @Module({
   imports: [AuthModule],
   controllers: [ApiKeyController],
-  providers: [ApiKeyService, ApiKeyGuard, JwtAuthGuard, TierCapabilityService, UsageService, PrismaService],
+  providers: [ApiKeyService, ApiKeyGuard, JwtAuthGuard, TierCapabilityService, UsageService],
   exports: [ApiKeyGuard, ApiKeyService],
 })
 export class ApiKeyModule {}

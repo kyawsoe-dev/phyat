@@ -46,14 +46,16 @@ export async function bootstrap(): Promise<express.Express> {
     app.use(SecurityMiddleware);
     app.use(RateLimitMiddleware);
 
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle('Phyat API')
-      .setDescription('URL shortening API for Phyat')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/docs', app, document);
+    if (process.env.NODE_ENV !== 'production') {
+      const swaggerConfig = new DocumentBuilder()
+        .setTitle('Phyat API')
+        .setDescription('URL shortening API for Phyat')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+      const document = SwaggerModule.createDocument(app, swaggerConfig);
+      SwaggerModule.setup('api/docs', app, document);
+    }
 
     await app.init();
   } catch (error) {
@@ -92,14 +94,16 @@ if (require.main === module) {
     app.use(SecurityMiddleware);
     app.use(RateLimitMiddleware);
 
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle('Phyat API')
-      .setDescription('URL shortening API for Phyat')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/docs', app, document);
+    if (process.env.NODE_ENV !== 'production') {
+      const swaggerConfig = new DocumentBuilder()
+        .setTitle('Phyat API')
+        .setDescription('URL shortening API for Phyat')
+        .setVersion('1.0')
+        .addBearerAuth()
+        .build();
+      const document = SwaggerModule.createDocument(app, swaggerConfig);
+      SwaggerModule.setup('api/docs', app, document);
+    }
 
     await app.listen(port);
     logger.log(`Application is running on: http://localhost:${port}`);

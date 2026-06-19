@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
 import { AuthModule } from '../auth/auth.module';
 import { DomainsController } from './interfaces/domains.controller';
 import { DomainsService } from './application/domains.service';
@@ -10,7 +9,7 @@ import { UsageService } from '../subscriptions/application/usage.service';
 @Module({
   imports: [AuthModule],
   controllers: [DomainsController],
-  providers: [DomainsService, DomainRepository, TierCapabilityService, UsageService, PrismaService],
+  providers: [DomainsService, DomainRepository, TierCapabilityService, UsageService],
   exports: [DomainsService, DomainRepository],
 })
 export class DomainsModule {}

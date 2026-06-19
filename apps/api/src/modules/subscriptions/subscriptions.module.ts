@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { PrismaService } from '../../common/prisma.service';
 import { AuthModule } from '../auth/auth.module';
 import { SubscriptionsController } from './interfaces/subscriptions.controller';
 import { StripeWebhooksController } from './infrastructure/stripe.webhooks.controller';
@@ -20,7 +19,6 @@ import { StripeService } from './infrastructure/stripe.service';
     CouponRepository,
     TierCapabilityService,
     UsageService,
-    PrismaService,
     StripeService,
   ],
   exports: [SubscriptionsService, TierCapabilityService, UsageService],

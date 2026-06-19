@@ -1,5 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { PrismaService } from './common/prisma.service';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ApiKeyModule } from './modules/api-keys/api-key.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -13,7 +14,10 @@ import { InvoiceModule } from './modules/invoices/invoice.module';
 import { UpgradeRequestsModule } from './modules/upgrade-requests/upgrade-requests.module';
 import { AdminModule } from './modules/admin/admin.module';
 
+@Global()
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env', '../.env', '../../.env'] }), AdminModule, AnalyticsModule, AuthModule, ApiKeyModule, CampaignsModule, DomainsModule, InvoiceModule, LinksModule, QrCodesModule, SubscriptionsModule, UpgradeRequestsModule, WebhooksModule],
+  providers: [PrismaService],
+  exports: [PrismaService],
 })
 export class AppModule {}

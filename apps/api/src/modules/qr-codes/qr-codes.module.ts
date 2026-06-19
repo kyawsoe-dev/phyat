@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { PrismaService } from '../../common/prisma.service';
 import { AnalyticsService } from '../analytics/application/analytics.service';
 import { AnalyticsRepository } from '../analytics/infrastructure/analytics.repository';
 import { AuthModule } from '../auth/auth.module';
@@ -12,6 +11,6 @@ import { QrCodesController } from './interfaces/qr-codes.controller';
 @Module({
   imports: [AuthModule],
   controllers: [QrCodesController],
-  providers: [QrCodesService, AnalyticsService, AnalyticsRepository, TierCapabilityService, UsageService, WebhooksService, PrismaService],
+  providers: [QrCodesService, AnalyticsService, AnalyticsRepository, TierCapabilityService, UsageService, WebhooksService],
 })
 export class QrCodesModule {}
