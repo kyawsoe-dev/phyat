@@ -1,0 +1,420 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum LinkStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum TierCode {
+  FREE
+  PRO
+  DEVELOPER
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+}
+
+enum RedirectType {
+  TEMPORARY
+  PERMANENT
+}
+
+enum QrCodeStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum AnalyticsEventType {
+  CLICK
+  SCAN
+}
+
+enum WebhookEvent {
+  LINK_CREATED
+  LINK_UPDATED
+  LINK_DELETED
+  LINK_CLICKED
+  QR_CREATED
+  QR_SCANNED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+enum InvoiceStatus {
+  PAID
+  UNPAID
+  CANCELLED
+  REFUNDED
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+enum UsageFeature {
+  LINKS
+  QR_CODES
+  CUSTOM_DOMAINS
+  API_KEYS
+  WEBHOOKS
+  API_CALLS
+  WEBHOOK_DELIVERIES
+  EXPORTS
+  BULK_ROWS
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  passwordHash String?  @map("password_hash")
+  googleId     String?  @unique @map("google_id")
+  isAdmin      Boolean  @default(false) @map("is_admin")
+  admin2faSecret String? @map("admin_2fa_secret")
+  admin2faEnabled Boolean @default(false) @map("admin_2fa_enabled")
+  user2faSecret  String? @map("user_2fa_secret")
+  user2faEnabled Boolean @default(false) @map("user_2fa_enabled")
+  loginAttempts Int      @default(0) @map("login_attempts")
+  lockedUntil   DateTime? @map("locked_until")
+  tierId       String   @map("tier_id")
+  tier         Tier     @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  links        Link[]
+  campaigns    Campaign[]
+  domains      Domain[]
+  apiKeys      ApiKey[]
+  subscriptions Subscription[]
+  invoices      Invoice[]
+  upgradeRequests UpgradeRequest[]
+  couponRedemptions CouponRedemption[]
+  webhookEndpoints WebhookEndpoint[]
+  usageCounters UsageCounter[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  userId      String        @map("user_id")
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount      Int
+  currency    String        @default("usd")
+  description String?
+  status      InvoiceStatus @default(UNPAID)
+  issuedAt    DateTime      @default(now()) @map("issued_at")
+  paidAt      DateTime?     @map("paid_at")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model UpgradeRequest {
+  id              String        @id @default(cuid())
+  userId          String        @map("user_id")
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestedTierId String        @map("requested_tier_id")
+  tier            Tier          @relation(fields: [requestedTierId], references: [id], onDelete: Restrict)
+  status          RequestStatus @default(PENDING)
+  adminNote       String?       @map("admin_note")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("upgrade_requests")
+}
+
+model Tier {
+  id           String         @id @default(cuid())
+  code         TierCode       @unique
+  name         String
+  maxLinks     Int?           @map("max_links")
+  maxLinksPerMonth Int?       @map("max_links_per_month")
+  maxQrCodesPerMonth Int?     @map("max_qr_codes_per_month")
+  maxCustomDomains Int?       @map("max_custom_domains")
+  maxApiKeys   Int?           @map("max_api_keys")
+  maxWebhooks  Int?           @map("max_webhooks")
+  bulkCreateLimit Int?        @map("bulk_create_limit")
+  analyticsRetentionDays Int? @map("analytics_retention_days")
+  apiRateLimitPerMinute Int?  @map("api_rate_limit_per_minute")
+  priceMonthly Int?           @map("price_monthly")
+  priceAnnual  Int?           @map("price_annual")
+  annualDiscountPercent Int    @default(0) @map("annual_discount_percent")
+  description  String?
+  features     String[]
+  customDomains Boolean       @default(false) @map("custom_domains")
+  apiAccess     Boolean       @default(false) @map("api_access")
+  webhooks      Boolean       @default(false)
+  advancedAnalytics Boolean   @default(false) @map("advanced_analytics")
+  utmBuilder    Boolean       @default(false) @map("utm_builder")
+  qrCustomization Boolean     @default(false) @map("qr_customization")
+  bulkImport    Boolean       @default(false) @map("bulk_import")
+  exportData    Boolean       @default(false) @map("export_data")
+  campaignsEnabled Boolean    @default(false) @map("campaigns_enabled")
+  isActive      Boolean       @default(true) @map("is_active")
+  isPublic      Boolean       @default(true) @map("is_public")
+  sortOrder     Int           @default(0) @map("sort_order")
+  users        User[]
+  subscriptions Subscription[]
+  upgradeRequests UpgradeRequest[]
+  usageCounters UsageCounter[]
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  @@map("tiers")
+}
+
+model Link {
+  id           String      @id @default(cuid())
+  userId       String      @map("user_id")
+  shortHost    String      @default("localhost:3000") @map("short_host")
+  slug         String
+  destination  String
+  title        String?
+  notes        String?
+  tags         String[]
+  utmParams    Json?       @map("utm_params")
+  customParams Json?       @map("custom_params")
+  redirectType RedirectType @default(TEMPORARY) @map("redirect_type")
+  archivedAt   DateTime?   @map("archived_at")
+  passwordHash String?     @map("password_hash")
+  expiresAt    DateTime?   @map("expires_at")
+  status       LinkStatus  @default(ACTIVE)
+  qrCodeDataUrl String?    @map("qr_code_data_url")
+  clickCount   Int         @default(0) @map("click_count")
+  scanCount    Int         @default(0) @map("scan_count")
+  campaignId   String?     @map("campaign_id")
+  campaign     Campaign?   @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  domainId     String?     @map("domain_id")
+  domain       Domain?     @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analytics    Analytics[]
+  qrCodes      QrCode[]
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  @@unique([shortHost, slug])
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@index([campaignId])
+  @@index([domainId])
+  @@index([shortHost, slug])
+  @@map("links")
+}
+
+model Domain {
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  domain            String   @unique
+  verified          Boolean  @default(false)
+  verificationToken String   @map("verification_token")
+  sslEnabled        Boolean  @default(false) @map("ssl_enabled")
+  isDefault         Boolean  @default(false) @map("is_default")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links             Link[]
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("domains")
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  name        String
+  description String?
+  clickGoal   Int?      @map("click_goal")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links       Link[]
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@map("campaigns")
+}
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  prefix      String
+  keyHash     String    @unique @map("key_hash")
+  lastFour    String    @map("last_four")
+  lastUsedAt  DateTime? @map("last_used_at")
+  revokedAt   DateTime? @map("revoked_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("api_keys")
+}
+
+model QrCode {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  linkId      String       @map("link_id")
+  link        Link         @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  title       String?
+  design      Json?
+  imageFormat String       @default("png") @map("image_format")
+  imageDataUrl String      @map("image_data_url")
+  scanCount   Int          @default(0) @map("scan_count")
+  status      QrCodeStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@index([linkId])
+  @@map("qr_codes")
+}
+
+model WebhookEndpoint {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  url         String
+  secret      String
+  events      WebhookEvent[]
+  isActive    Boolean      @default(true) @map("is_active")
+  deliveries  WebhookDelivery[]
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id          String                @id @default(cuid())
+  endpointId  String                @map("endpoint_id")
+  endpoint    WebhookEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  event       WebhookEvent
+  payload     Json
+  status      WebhookDeliveryStatus @default(PENDING)
+  attempts    Int                   @default(0)
+  lastError   String?               @map("last_error")
+  deliveredAt DateTime?             @map("delivered_at")
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  @@index([endpointId, createdAt])
+  @@map("webhook_deliveries")
+}
+
+model UsageCounter {
+  id        String       @id @default(cuid())
+  userId    String       @map("user_id")
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tierId    String       @map("tier_id")
+  tier      Tier         @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  feature   UsageFeature
+  month     DateTime
+  count     Int          @default(0)
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  @@unique([userId, feature, month])
+  @@index([tierId])
+  @@map("usage_counters")
+}
+
+model Subscription {
+  id                String             @id @default(cuid())
+  userId            String             @map("user_id")
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tierId            String             @map("tier_id")
+  tier              Tier               @relation(fields: [tierId], references: [id], onDelete: Restrict)
+  status            SubscriptionStatus @default(ACTIVE)
+  billingCycle      BillingCycle       @default(MONTHLY) @map("billing_cycle")
+  currentPeriodStart DateTime          @default(now()) @map("current_period_start")
+  currentPeriodEnd   DateTime          @map("current_period_end")
+  canceledAt        DateTime?          @map("canceled_at")
+  stripeCustomerId   String?            @map("stripe_customer_id")
+  stripeSubscriptionId String?         @map("stripe_subscription_id")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  updatedAt         DateTime           @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([tierId])
+  @@map("subscriptions")
+}
+
+model Coupon {
+  id               String             @id @default(cuid())
+  code             String             @unique
+  discountPercent  Int                @default(0) @map("discount_percent")
+  maxUses          Int                @default(1) @map("max_uses")
+  maxUsesPerUser   Int                @default(1) @map("max_uses_per_user")
+  usedCount        Int                @default(0) @map("used_count")
+  expiresAt        DateTime?          @map("expires_at")
+  isActive         Boolean            @default(true) @map("is_active")
+  redemptions      CouponRedemption[]
+  createdAt        DateTime           @default(now()) @map("created_at")
+
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String   @map("coupon_id")
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  redeemedAt DateTime @default(now()) @map("redeemed_at")
+
+  @@unique([couponId, userId])
+  @@index([userId])
+  @@map("coupon_redemptions")
+}
+
+model Analytics {
+  id        String   @id @default(cuid())
+  linkId    String   @map("link_id")
+  link      Link     @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  eventType AnalyticsEventType @default(CLICK) @map("event_type")
+  userAgent String?  @map("user_agent")
+  browser   String?
+  os        String?
+  device    String?
+  referrer  String?
+  referrerDomain String? @map("referrer_domain")
+  ip        String?
+  country   String?
+  region    String?
+  city      String?
+  clickedAt DateTime @default(now()) @map("clicked_at")
+
+  @@index([linkId, clickedAt])
+  @@index([clickedAt])
+  @@map("analytics")
+}
