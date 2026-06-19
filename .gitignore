@@ -8,3 +8,4 @@ coverage
 *.log
 *.tsbuildinfo
 .vercel
+apps/api/prisma/
