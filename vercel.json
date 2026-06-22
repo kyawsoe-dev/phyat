@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd apps/api && npm run build",
+  "installCommand": "npm install",
+  "builds": [{ "src": "apps/api/dist/main.js", "use": "@vercel/node" }],
+  "routes": [{ "src": "/(.*)", "dest": "apps/api/dist/main.js" }]
+}

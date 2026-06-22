@@ -22,7 +22,7 @@ npx vercel deploy apps/web \
 
 echo ""
 echo "=== Deploying API (NestJS) ==="
-npx vercel deploy apps/api \
+npx vercel deploy . \
   --project phyat-api \
   $FLAG \
   --yes
